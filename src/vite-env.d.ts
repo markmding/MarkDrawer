@@ -1,0 +1,10 @@
+/// <reference types="svelte" />
+/// <reference types="vite/client" />
+// MARK#EZVE.COM
+
+/** Injected by vite.config.ts from package.json's `version`. */
+declare const __APP_VERSION__: string
+
+interface Window {
+  __TAURI_INTERNALS__?: unknown
+}

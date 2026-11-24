@@ -1,0 +1,135 @@
+/*
+ * Monokai Pro — 官方深色 + 同色系衍生浅色
+ *
+ * Mark Drawer 主题文件：同时作用于应用界面、编辑器和导出文档。
+ * 明暗变体由「外观主题」切换（浅色 / 深色 / 跟随系统）。
+ * 打印使用 11pt 无衬线正文与 19 / 17 / 21 mm 页边距。
+ */
+
+:root {
+  --bg: #faf4f2;
+  --bg-subtle: #f2e9e6;
+  --bg-elevated: #fffdfc;
+  --bg-hover: #ede3e0;
+  --bg-active: #e4d8d4;
+  --text: #29242a;
+  --text-muted: #6e676c;
+  --text-faint: #a39a9e;
+  --border: #e0d5d1;
+  --border-strong: #cfc1bc;
+  --accent: #b23a55;
+  --accent-soft: #f7e4e8;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  --warning: #9a5c00;
+  --success: #3f6f34;
+  --info: #0b627d;
+  --callout-tip: var(--success);
+  --callout-warning: var(--warning);
+  --callout-info: var(--info);
+  --callout-success: var(--success);
+
+  --mk-text: #29242a;
+  --mk-muted: #6e676c;
+  --mk-border: #e0d5d1;
+  --mk-surface: #f2e9e6;
+  --mk-accent: #b23a55;
+  --mk-bg: #faf4f2;
+  --mk-code-bg: #f2e9e6;
+  --mk-callout-tip: #3f6f34;
+  --mk-callout-warning: #9a5c00;
+  --mk-callout-danger: #b3261e;
+  --mk-callout-info: #0b627d;
+  --mk-callout-success: #3f6f34;
+
+  --mk-print-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans", Arial, sans-serif;
+  --mk-print-font-size: 11pt;
+  --mk-print-line-height: 1.72;
+  --mk-print-accent: #a33a52;
+  --mk-print-muted: #555;
+  --mk-print-margin-top: 19mm;
+  --mk-print-margin-right: 17mm;
+  --mk-print-margin-bottom: 21mm;
+  --mk-print-margin-left: 17mm;
+}
+
+:root[data-theme='dark'] {
+  --bg: #2d2a2e;
+  --bg-subtle: #221f22;
+  --bg-elevated: #403e41;
+  --bg-hover: #3a373b;
+  --bg-active: #403e41;
+  --text: #fcfcfa;
+  --text-muted: #c1c0c0;
+  --text-faint: #727072;
+  --border: #403e41;
+  --border-strong: #5b595c;
+  --accent: #ffd866;
+  --accent-soft: #3a352a;
+  --accent-text: #221f22;
+  --danger: #ff6188;
+  --warning: #fc9867;
+  --success: #a9dc76;
+  --info: #78dce8;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+
+  --mk-text: #fcfcfa;
+  --mk-muted: #c1c0c0;
+  --mk-border: #403e41;
+  --mk-surface: #221f22;
+  --mk-accent: #ffd866;
+  --mk-bg: #2d2a2e;
+  --mk-code-bg: #221f22;
+  --mk-callout-tip: #a9dc76;
+  --mk-callout-warning: #fc9867;
+  --mk-callout-danger: #ff6188;
+  --mk-callout-info: #78dce8;
+  --mk-callout-success: #a9dc76;
+}
+
+@page {
+  size: A4;
+  margin: 19mm 17mm 21mm;
+}
+
+/*
+ * 语法高亮 token（--tok-*）：源码视图、编辑器代码块与导出共用。
+ */
+:root {
+  --tok-comment: #a0a0a8;
+  --tok-keyword: #b23a55;
+  --tok-string: #3f7d28;
+  --tok-number: #a06a00;
+  --tok-function: #3f6f9c;
+  --tok-variable: #b35a00;
+  --tok-type: #7b5aa6;
+  --tok-operator: #0f7f86;
+  --tok-punctuation: #55505a;
+  --tok-tag: #b23a55;
+  --tok-attr: #a06a00;
+  --tok-builtin: #7b5aa6;
+  --tok-meta: #3f6f9c;
+  --tok-invalid: #b3261e;
+  --tok-heading: #3f6f9c;
+  --tok-link: #0f7f86;
+}
+
+:root[data-theme='dark'] {
+  --tok-comment: #727072;
+  --tok-keyword: #ff6188;
+  --tok-string: #ffd866;
+  --tok-number: #ab9df2;
+  --tok-function: #a9dc76;
+  --tok-variable: #fc9867;
+  --tok-type: #78dce8;
+  --tok-operator: #ff6188;
+  --tok-punctuation: #c8c6c9;
+  --tok-tag: #ff6188;
+  --tok-attr: #a9dc76;
+  --tok-builtin: #78dce8;
+  --tok-meta: #ffd866;
+  --tok-invalid: #ff6188;
+  --tok-heading: #a9dc76;
+  --tok-link: #78dce8;
+}

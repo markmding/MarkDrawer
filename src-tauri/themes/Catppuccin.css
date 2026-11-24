@@ -1,0 +1,137 @@
+/*
+ * Catppuccin — Latte（浅色）/ Mocha（深色）
+ *
+ * Mark Drawer 主题文件：同时作用于应用界面、编辑器和导出文档。
+ * 明暗变体由「外观主题」切换（浅色 / 深色 / 跟随系统）。
+ * 打印使用衬线正文与 20 / 18 / 22 mm 页边距。
+ */
+
+:root {
+  --bg: #eff1f5;
+  --bg-subtle: #e6e9ef;
+  --bg-elevated: #ffffff;
+  --bg-hover: #dce0e8;
+  --bg-active: #ccd0da;
+  --text: #4c4f69;
+  --text-muted: #63667c;
+  --text-faint: #9ca0b0;
+  --border: #ccd0da;
+  --border-strong: #bcc0cc;
+  --accent: #1e66f5;
+  --accent-soft: #dce7fd;
+  --accent-text: #ffffff;
+  --danger: #d20f39;
+  --warning: #a05f00;
+  --success: #3f7d28;
+  --info: #0b6e99;
+  --callout-tip: var(--success);
+  --callout-warning: var(--warning);
+  --callout-info: var(--info);
+  --callout-success: var(--success);
+
+  --mk-text: #4c4f69;
+  --mk-muted: #63667c;
+  --mk-border: #ccd0da;
+  --mk-surface: #e6e9ef;
+  --mk-accent: #1e66f5;
+  --mk-bg: #eff1f5;
+  --mk-code-bg: #e6e9ef;
+  --mk-callout-tip: #3f7d28;
+  --mk-callout-warning: #a05f00;
+  --mk-callout-danger: #d20f39;
+  --mk-callout-info: #0b6e99;
+  --mk-callout-success: #3f7d28;
+
+  --mk-print-font: "Iowan Old Style", "Palatino Linotype", "Source Han Serif SC",
+    "Noto Serif CJK SC", "Songti SC", SimSun, Georgia, serif;
+  --mk-print-font-size: 10.5pt;
+  --mk-print-line-height: 1.72;
+  --mk-print-accent: #2154c4;
+  --mk-print-muted: #555;
+  --mk-print-margin-top: 20mm;
+  --mk-print-margin-right: 18mm;
+  --mk-print-margin-bottom: 22mm;
+  --mk-print-margin-left: 18mm;
+}
+
+:root[data-theme='dark'] {
+  --bg: #1e1e2e;
+  --bg-subtle: #181825;
+  --bg-elevated: #313244;
+  --bg-hover: #313244;
+  --bg-active: #45475a;
+  --text: #cdd6f4;
+  --text-muted: #a6adc8;
+  --text-faint: #7f849c;
+  --border: #313244;
+  --border-strong: #45475a;
+  --accent: #89b4fa;
+  --accent-soft: #2a3550;
+  --accent-text: #11111b;
+  --danger: #f38ba8;
+  --warning: #f9e2af;
+  --success: #a6e3a1;
+  --info: #89dceb;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+
+  --mk-text: #cdd6f4;
+  --mk-muted: #a6adc8;
+  --mk-border: #313244;
+  --mk-surface: #181825;
+  --mk-accent: #89b4fa;
+  --mk-bg: #1e1e2e;
+  --mk-code-bg: #181825;
+  --mk-callout-tip: #a6e3a1;
+  --mk-callout-warning: #f9e2af;
+  --mk-callout-danger: #f38ba8;
+  --mk-callout-info: #89dceb;
+  --mk-callout-success: #a6e3a1;
+}
+
+@page {
+  size: A4;
+  margin: 20mm 18mm 22mm;
+}
+
+/*
+ * 语法高亮 token（--tok-*）：源码视图、编辑器代码块与导出共用。
+ * Latte（浅色）
+ */
+:root {
+  --tok-comment: #9ca0b0;
+  --tok-keyword: #8839ef;
+  --tok-string: #40a02b;
+  --tok-number: #fe640b;
+  --tok-function: #1e66f5;
+  --tok-variable: #d20f39;
+  --tok-type: #df8e1d;
+  --tok-operator: #179299;
+  --tok-punctuation: #6c6f85;
+  --tok-tag: #1e66f5;
+  --tok-attr: #df8e1d;
+  --tok-builtin: #d20f39;
+  --tok-meta: #8839ef;
+  --tok-invalid: #d20f39;
+  --tok-heading: #1e66f5;
+  --tok-link: #1e66f5;
+}
+
+/* Mocha（深色） */
+:root[data-theme='dark'] {
+  --tok-comment: #6c7086;
+  --tok-keyword: #cba6f7;
+  --tok-string: #a6e3a1;
+  --tok-number: #fab387;
+  --tok-function: #89b4fa;
+  --tok-variable: #f38ba8;
+  --tok-type: #f9e2af;
+  --tok-operator: #94e2d5;
+  --tok-punctuation: #bac2de;
+  --tok-tag: #89b4fa;
+  --tok-attr: #f9e2af;
+  --tok-builtin: #f38ba8;
+  --tok-meta: #cba6f7;
+  --tok-invalid: #f38ba8;
+  --tok-heading: #89b4fa;
+  --tok-link: #89dceb;
+}
