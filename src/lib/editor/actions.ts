@@ -9,12 +9,16 @@ export type EditorAction =
   | 'heading1'
   | 'heading2'
   | 'heading3'
+  | 'heading4'
+  | 'heading5'
+  | 'heading6'
   | 'paragraph'
   | 'blockquote'
   | 'bulletList'
   | 'orderedList'
   | 'codeBlock'
   | 'table'
+  | 'taskStatus'
 
 type Handler = (action: EditorAction) => boolean
 

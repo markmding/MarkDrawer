@@ -1,13 +1,30 @@
 <script lang="ts">
   // MARK#EZVE.COM
   import * as api from '../api/drawer'
-  import { t } from '../i18n'
+  import { t, type MessageKey } from '../i18n'
   import { stripExtension } from '../paths'
 
   interface TemplateItem {
     name: string
     path: string
     content: string
+  }
+
+  // Template files ship with ASCII names (see src-tauri/src/paths.rs), so the
+  // picker translates the known ones and shows anything else — a user's own
+  // template in templates/ — under its file name.
+  const TEMPLATE_LABELS: Record<string, MessageKey> = {
+    note: 'newDoc.tplNote',
+    daily: 'newDoc.tplDaily',
+    todo: 'newDoc.tplTodo',
+    meeting: 'newDoc.tplMeeting',
+    project: 'newDoc.tplProject',
+    book: 'newDoc.tplBook'
+  }
+
+  function templateLabel(name: string): string {
+    const key = TEMPLATE_LABELS[name]
+    return key ? t(key) : name
   }
 
   let {
@@ -110,7 +127,7 @@
             <select id="new-doc-template" bind:value={selected}>
               <option value="">{t('newDoc.blank')}</option>
               {#each templates as template (template.path)}
-                <option value={template.name}>{template.name}</option>
+                <option value={template.name}>{templateLabel(template.name)}</option>
               {/each}
             </select>
             <span class="hint">

@@ -20,6 +20,8 @@
   --accent: #4a6d97;
   --accent-soft: #dfe7f3;
   --accent-text: #ffffff;
+  --selection-bg: #b5c5de;
+  --selection-text: #1c2330;
   --danger: #a83843;
   --warning: #8a6100;
   --success: #2f6f34;
@@ -68,6 +70,8 @@
   --accent: #88c0d0;
   --accent-soft: #33414f;
   --accent-text: #1b2028;
+  --selection-bg: #465872;
+  --selection-text: #f4f8ff;
   --danger: #e09098;
   --warning: #ebcb8b;
   --success: #a3be8c;
@@ -97,7 +101,7 @@
  * 语法高亮 token（--tok-*）：源码视图、编辑器代码块与导出共用。
  */
 :root {
-  --tok-comment: #7b8794;
+  --tok-comment: #636e84;
   --tok-keyword: #5e81ac;
   --tok-string: #4d7c4d;
   --tok-number: #96633a;
@@ -116,7 +120,7 @@
 }
 
 :root[data-theme='dark'] {
-  --tok-comment: #616e88;
+  --tok-comment: #8c97af;
   --tok-keyword: #81a1c1;
   --tok-string: #a3be8c;
   --tok-number: #d08770;

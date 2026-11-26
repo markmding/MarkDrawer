@@ -65,7 +65,7 @@ pub struct AttachmentResult {
 #[serde(rename_all = "camelCase")]
 pub struct AssetFile {
     pub name: String,
-    /// App-relative path, e.g. `themes/暖阳.css`
+    /// App-relative path, e.g. `themes/Nord.css`
     pub path: String,
     pub content: String,
 }
@@ -515,14 +515,14 @@ mod tests {
         let root = temp_drawer();
         fs::create_dir_all(root.join("themes")).unwrap();
         fs::create_dir_all(root.join("templates")).unwrap();
-        fs::write(root.join("themes/暖阳.css"), "body { color: red }").unwrap();
+        fs::write(root.join("themes/MyTheme.css"), "body { color: red }").unwrap();
         fs::write(root.join("themes/readme.txt"), "ignored").unwrap();
         fs::write(root.join("templates/日记.md"), "# 日记\n").unwrap();
 
         let themes = read_assets(&root, "themes", "css").unwrap();
         assert_eq!(themes.len(), 1);
-        assert_eq!(themes[0].name, "暖阳.css");
-        assert_eq!(themes[0].path, "themes/暖阳.css");
+        assert_eq!(themes[0].name, "MyTheme.css");
+        assert_eq!(themes[0].path, "themes/MyTheme.css");
         assert_eq!(themes[0].content, "body { color: red }");
 
         let templates = read_assets(&root, "templates", "md").unwrap();

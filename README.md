@@ -1,6 +1,6 @@
 # Mark Drawer 文屉
 
-> 随文几屉 奇思几许。
+> 随文一屉 奇思几许。
 
 本地优先、抽屉（Drawer）模式的 Markdown 编辑器：任意本地文件夹就是一个抽屉，界面支持中文 / English（默认中文）。产品需求见 [prd.md](./prd.md)。
 
@@ -12,7 +12,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 名称 | Mark Drawer 文屉 |
-| 口号 | 随文几屉 奇思几许 / A drawer for words, a wonder or two |
+| 口号 | 随文一屉 奇思几许 / A drawer for words, a wonder or two |
 | 概念 | 抽屉（Drawer）取代原来的「库 / Vault」：任意本地文件夹即一个抽屉 |
 | 界面语言 | 中文（默认）/ English，设置 → 界面语言即时切换，无需重启 |
 | 品牌常量 | `src/lib/brand.ts`（名称、口号、版本、欢迎文档名、水印） |
@@ -35,13 +35,14 @@
 ## 已实现（脚手架级）
 
 - **抽屉（Drawer）**：打开本地文件夹、递归文件树、新建/重命名/删除/拖拽移动、外部变更监听与刷新
-- **编辑器**：WYSIWYG（Crepe）+ 源码视图切换，多标签页，Ctrl+S / Ctrl+N / Ctrl+\\ 快捷键
-- **快捷键自定义**：文件 / 编辑 / 视图 / 格式菜单的每一项都有默认绑定，并显示在菜单右侧；「选项 → 自定义快捷键…」可逐项录入、检测冲突、单项或全部恢复默认，快捷键随设置持久化。格式项默认值：加粗 Ctrl+B、斜体 Ctrl+I、删除线 Ctrl+Shift+X、行内代码 Ctrl+E、标题 1/2/3 Ctrl+Alt+1/2/3、正文 Ctrl+Alt+0、引用 Ctrl+Shift+Q、无序/有序列表 Ctrl+Shift+8/7、代码块 Ctrl+Shift+K、表格 Ctrl+Alt+T
+- **编辑器**：WYSIWYG（Crepe）+ 源码视图切换，多标签页，Ctrl+S / Ctrl+N / Ctrl+Alt+/ 切换源码、Ctrl+\ 分栏
+- **快捷键自定义**：文件 / 编辑 / 视图 / 格式菜单的每一项都有默认绑定，并显示在菜单右侧；「选项 → 自定义快捷键…」可逐项录入、检测冲突、单项或全部恢复默认，快捷键随设置持久化。格式项默认值：加粗 Ctrl+B、斜体 Ctrl+I、删除线 Ctrl+Alt+U、行内代码 Ctrl+Alt+E、标题 1–6 Ctrl+Alt+1…6、正文 Ctrl+Alt+0、引用 Ctrl+Alt+Q、无序/有序列表 Ctrl+Alt+8 / 7、代码块 Ctrl+Alt+K、表格 Ctrl+Alt+T、切换任务状态 Ctrl+Enter；视图项：切换源码 Ctrl+Alt+/、分栏 Ctrl+\、切换侧边栏 Ctrl+Alt+L、大纲 Ctrl+Alt+O。格式键统一走 Ctrl+Alt，因为裸 Ctrl+K/L/U/Q 等会被 WebView2 的浏览器加速键截走（桌面端实测失效）
+- **任务清单三态**：`- [ ]` 待办、`- [~]` 进行中（`◐`）、`- [x]` 完成；输入 `- [~] ` 即时切换，Ctrl+Enter 循环三态，点击进行中即标记完成；空标记项（`- [ ] ` 后无内容）也能保持为任务项；导出 HTML / PDF 同样渲染三态
 - **纯文本文件**：文件树可直接打开 css / js / ts / json / yaml / yml / html / txt 等常见纯文本，始终使用 CodeMirror 源码编辑器并按扩展名高亮；编码、换行符、自动保存与冲突处理与 Markdown 共用，导出/分栏对纯文本禁用
 - **YAML Front Matter**：文件顶部 `--- … ---` 元数据不进入富文本模型，编辑器顶端显示只读「YAML 属性」卡片（列出键值或原文），可一键切到源码编辑；保存时按原字节拼回，富文本往返不会改写用户元数据；导出时同一份 YAML 渲染为 `.doc-properties` 属性卡片
 - **代码块着色**：`--tok-*` 令牌色由主题定义，编辑器内代码块（CodeMirror）、源码视图、分栏镜像与导出 HTML 的 `.hljs-*` 共用同一套映射，切换主题即整体换色
 - **源码视图主题化**：CodeMirror 外壳与语法高亮读取应用同一套变量（`--bg` / `--text` / `--tok-*`），明暗主题与 WYSIWYG 保持一致
-- **目录大纲**：视图菜单「大纲」、菜单栏 `≣` 或 `Ctrl+Shift+O` 打开右侧大纲，点击标题在预览 / 源码 / 分栏三种视图下都能定位（按标题序号跨视图对齐，跳过代码块里的 `#`）
+- **目录大纲**：视图菜单「大纲」、标签栏右端 `≣` 或 `Ctrl+Alt+O` 打开右侧大纲，点击标题在预览 / 源码 / 分栏三种视图下都能定位（按标题序号跨视图对齐，跳过代码块里的 `#`）
 - **自动保存**：定时 + 失焦两个独立开关，默认 30s / 开启
 - **路径安全**：所有 Rust 命令限制在 抽屉 内（拒绝绝对路径与 `..` 越界）
 - **保存冲突**：写入前比对 mtime，外部修改返回 `CONFLICT`；编辑器上方显示非阻塞提示条，可选择「重新加载」或「覆盖保存」
@@ -76,7 +77,7 @@
 | 主题 / 模板管理面板、主题热重载 | ✅ 默认 One 明暗 + 五套主题文件；设置内选择与刷新、watcher 热重载；模板在新建对话框选择 |
 | tantivy 全文索引 | ✅ 内存索引 + mtime 增量同步 + 中文 ngram，失败回退线性扫描 |
 | PDF 页码范围 / 自定义起始页码 | ⚠️ UI 与参数已就绪，WebView 打印能力待 M0 验证（PRD R2） |
-| 安装包 ≤12MB、签名 | ⚠️ NSIS 安装包 4.95MB 已验证；代码签名 / 自动更新未做 |
+| 安装包 ≤12MB、签名 | ⚠️ NSIS 安装包 5.01MB 已验证；代码签名 / 自动更新未做 |
 
 ## 环境要求
 
@@ -86,6 +87,20 @@
 - macOS：Xcode Command Line Tools
 
 > 本机已具备完整构建环境：Rust 1.100 + VS Build Tools 2022（MSVC 14.44 / Windows SDK 10.0.26100），可完成 release 编译与 NSIS 打包。
+
+### 构建验证记录（2026-11-26 · 0.6.0 正式版）
+
+| 项目 | 结果 |
+| --- | --- |
+| `npm run desktop:build` | ✅ 前端 30.43s + release 编译 4m10s，退出码 0 |
+| 可执行文件 | `src-tauri/target/release/mark-drawer.exe` — **9.82MB**（10,297,344 字节） |
+| NSIS 安装包 | `Mark Drawer_0.6.0_x64-setup.exe` — **5.01MB**（5,251,307 字节，目标 ≤12MB ✅） |
+| MSI 安装包 | `Mark Drawer_0.6.0_x64_en-US.msi` — **5.94MB**（6,230,016 字节） |
+| 便携版压缩包 | `MarkDrawer_Portable_0.6.0.7z` — **4.77MB**（4,882,624 字节，含 exe + themes + templates） |
+| 源码包 | `MarkDrawer_Source_0.6.0.zip` — **360KB**（112 文件，原始 977KB） |
+| 启动冒烟测试 | ✅ 便携版在空目录启动正常，标题 `Mark Drawer 文屉`，自动写入 `themes/` `templates/` `attachments/` |
+| 版本元数据 | ✅ exe / 便携版 / 安装包 ProductVersion 均为 `0.6.0`，ProductName `Mark Drawer`；源码包内 `package.json` 为 `0.6.0` |
+| 前端验证 | `svelte-check` 793 文件 0 错误 / 0 警告、`version:check` 通过 ✅ |
 
 ### 构建验证记录（2026-11-25 · 0.4.0 正式版）
 
@@ -131,12 +146,16 @@ npm run check          # svelte-check 类型检查
 npm run build          # 构建前端到 dist/（先校验版本一致性）
 npm run tauri build    # 打桌面安装包
 npm run icons          # 重新生成占位图标（替换品牌图标后可用 npx tauri icon）
+npm run package:portable  # 便携版 exe + 7z（需先 desktop:build）
+npm run package:source    # 源码 zip（排除依赖与构建产物）
 
 # 版本维护（详见下文「版本管理」）
 npm run version:check     # 校验 package.json / Cargo.toml / tauri.conf.json / CHANGELOG 一致
-npm run version:dev       # 0.4.0 → 0.4.0-dev.1；0.4.0-dev.1 → 0.4.0-dev.2
-npm run version:release   # 0.4.0-dev.2 → 0.4.0
-npm run version:bump -- minor   # 0.4.0 → 0.5.0（major / minor / patch）
+npm run version:dev       # 0.6.0 → 0.6.0-dev.1；0.6.0-dev.1 → 0.6.0-dev.2
+npm run version:release   # 0.6.0-dev.2 → 0.6.0
+npm run version:bump -- minor   # 0.6.0 → 0.7.0（major / minor / patch）
+
+node tools/version.mjs set 0.6.0-dev.1   # 显式指定版本（同样同步 Cargo.toml 与 CHANGELOG）
 ```
 
 ## 版本管理
@@ -147,7 +166,7 @@ npm run version:bump -- minor   # 0.4.0 → 0.5.0（major / minor / patch）
 | --- | --- |
 | `src-tauri/tauri.conf.json` | `"version": "../package.json"`，安装包与 exe 属性直接读这里 |
 | `src-tauri/Cargo.toml` | 由 `tools/version.mjs` 同步，`cargo check` 时若不一致以脚本为准 |
-| `src/lib/brand.ts` | 使用 Vite 注入的 `__APP_VERSION__`（来自 `package.json`），界面与「关于」即时跟随 |
+| `src/lib/brand.ts` | 使用 Vite 注入的 `__APP_VERSION__`（来自 `package.json`），界面与「关于」跟随；`vite.config.ts` 监听 `package.json`，改版本会自动重启 dev server（`define` 只在启动时求值） |
 | `CHANGELOG.md` | 每个版本必须有 `## [x.y.z]` 条目，`version:check` 会检查 |
 
 规则：
@@ -155,7 +174,7 @@ npm run version:bump -- minor   # 0.4.0 → 0.5.0（major / minor / patch）
 - 开发中的功能用 `version:dev` 递增预发布号（`0.4.0-dev.1`），发版前 `version:release` 去掉后缀。
 - 新增功能 → `version:bump -- minor`；只修 bug → `patch`；存储格式或行为不兼容 → `major`。
 - `npm run build`、`desktop:build`、`package:portable` 都会先跑 `version:check`，版本不一致直接中断构建。
-- 历史版本见 [CHANGELOG.md](./CHANGELOG.md)：0.1.0（M0 技术验证）→ 0.2.0（M1/M2 + 品牌化）→ 0.3.0（YAML / 大纲 / 主题令牌）→ 0.4.0（快捷键与版本机制）。
+- 历史版本见 [CHANGELOG.md](./CHANGELOG.md)：0.1.0（M0 技术验证）→ 0.2.0（M1/M2 + 品牌化）→ 0.3.0（YAML / 大纲 / 主题令牌）→ 0.4.0（开发版本机制 + 便携版）→ 0.5.0（源码不再写入 HTML / 三态任务清单 / 快捷键常规化）→ 0.6.0（源码视图 Ctrl+/ 修复 / 快捷键再调 / 标签栏两端固定按钮 / 口号更正）。
 
 ## 打开文件（命令行 / 文件关联）
 
@@ -240,9 +259,11 @@ mark-drawer/
 
 安装包与便携版已从 `src-tauri/target` 移出，避免再次进入源码目录：
 
-- `D:\AIDEV\markup-artifacts\Mark Drawer_0.4.0_x64-setup.exe`（NSIS 安装包）
+- `D:\AIDEV\markup-artifacts\Mark Drawer_0.6.0_x64-setup.exe`（NSIS 安装包）
+- `D:\AIDEV\markup-artifacts\Mark Drawer_0.6.0_x64_en-US.msi`（MSI 安装包）
 - `D:\AIDEV\markup-artifacts\MarkDrawer_Portable.exe`（便携版裸 exe）
-- `D:\AIDEV\markup-artifacts\MarkDrawer_Portable_0.4.0.7z`（发布用压缩包）
+- `D:\AIDEV\markup-artifacts\MarkDrawer_Portable_0.6.0.7z`（发布用压缩包）
+- `D:\AIDEV\markup-artifacts\MarkDrawer_Source_0.6.0.zip`（源码包，`npm run package:source` 生成）
 
 #### 便携版命名规则
 
@@ -260,7 +281,20 @@ mark-drawer/
 
 ### 源码包
 
-- `D:\AIDEV\markup-source-2026-11-21.zip`（不含 `.git`、`node_modules`、构建产物）
+| 文件 | 说明 |
+| --- | --- |
+| `D:\AIDEV\markup-artifacts\MarkDrawer_Source_0.6.0.zip` | 0.6.0 正式版源码（112 个文件，360KB，由 `npm run package:source` 生成） |
+| `D:\AIDEV\markup-artifacts\MarkDrawer_Source_0.5.0.zip` | 0.5.0 源码（112 个文件，357KB） |
+| `D:\AIDEV\MarkDrawer_Source_0.4.0.zip` | 0.4.0 源码（105 个文件，344KB） |
+| `D:\AIDEV\markup-source-2026-11-21.zip` / `-11-22.zip` | 早期快照，仅作留存 |
+
+包含 `src/`、`src-tauri/`（含 `themes/` `templates/` `icons/` `windows/`）、`tools/`、`docs/`、`design/` 与全部配置文件（`package.json`、`package-lock.json`、`Cargo.toml`、`Cargo.lock`、`tsconfig.json`、`vite.config.ts` 等）。不含 `.git`、`node_modules`、`dist/`、`src-tauri/target/`、`src-tauri/gen/`、日志与构建产物；解压后目录结构即仓库结构，`npm ci` 后可直接构建。
+
+重新生成（版号自动取自 `package.json`，输出到 `MARKDRAWER_OUT`，默认 `markup-artifacts/`）：
+
+```bash
+npm run package:source
+```
 
 上传私有仓库：
 

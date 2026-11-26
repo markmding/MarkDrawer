@@ -138,17 +138,47 @@ fn seed_builtin_themes(root: &Path) -> AppResult<()> {
 
 /// Ready-to-use note templates embedded at build time and seeded the same way
 /// as the themes: first run only, never overwriting edits.
+///
+/// File names are ASCII on purpose: the template name becomes the note name in
+/// a `新文档` dropdown, and a Chinese name turns into mojibake in the file
+/// pickers and archives of some systems.
 const BUILTIN_TEMPLATES: &[(&str, &str)] = &[
-    ("笔记.md", include_str!("../templates/笔记.md")),
-    ("每日笔记.md", include_str!("../templates/每日笔记.md")),
-    ("任务清单.md", include_str!("../templates/任务清单.md")),
-    ("会议记录.md", include_str!("../templates/会议记录.md")),
-    ("项目笔记.md", include_str!("../templates/项目笔记.md")),
-    ("读书笔记.md", include_str!("../templates/读书笔记.md")),
+    ("note.md", include_str!("../templates/note.md")),
+    ("daily.md", include_str!("../templates/daily.md")),
+    ("todo.md", include_str!("../templates/todo.md")),
+    ("meeting.md", include_str!("../templates/meeting.md")),
+    ("project.md", include_str!("../templates/project.md")),
+    ("book.md", include_str!("../templates/book.md")),
 ];
+
+/// Earlier builds seeded Chinese file names. They are renamed in place rather
+/// than re-seeded, so a user who edited a template keeps the edit and does not
+/// end up with two copies of the same template.
+const LEGACY_TEMPLATE_NAMES: &[(&str, &str)] = &[
+    ("笔记.md", "note.md"),
+    ("每日笔记.md", "daily.md"),
+    ("任务清单.md", "todo.md"),
+    ("会议记录.md", "meeting.md"),
+    ("项目笔记.md", "project.md"),
+    ("读书笔记.md", "book.md"),
+];
+
+/// Moves a pre-0.7 template to its ASCII name. Skipped when the new name
+/// already exists, so a hand-made `note.md` is never clobbered.
+fn migrate_legacy_templates(dir: &Path) -> AppResult<()> {
+    for (old, new) in LEGACY_TEMPLATE_NAMES {
+        let from = dir.join(old);
+        let to = dir.join(new);
+        if from.exists() && !to.exists() {
+            fs::rename(&from, &to)?;
+        }
+    }
+    Ok(())
+}
 
 fn seed_builtin_templates(root: &Path) -> AppResult<()> {
     let dir = root.join("templates");
+    migrate_legacy_templates(&dir)?;
     for (name, markdown) in BUILTIN_TEMPLATES {
         let path = dir.join(name);
         if path.exists() {
@@ -233,14 +263,45 @@ mod tests {
             .map(|entry| entry.file_name().to_string_lossy().to_string())
             .collect();
         assert_eq!(files.len(), BUILTIN_TEMPLATES.len());
-        assert!(files.iter().any(|name| name == "会议记录.md"));
-        let meeting = fs::read_to_string(root.join("templates/会议记录.md")).unwrap();
+        assert!(files.iter().any(|name| name == "meeting.md"));
+        let meeting = fs::read_to_string(root.join("templates/meeting.md")).unwrap();
         assert!(meeting.contains("## 行动项"));
+        // Every template carries a bilingual title and the usage block.
+        for (name, _) in BUILTIN_TEMPLATES {
+            let body = fs::read_to_string(root.join("templates").join(name)).unwrap();
+            assert!(body.starts_with("# "), "{name} needs a title");
+            assert!(body.contains(" / "), "{name} needs a bilingual title");
+            assert!(body.contains("怎么用 / How to use"), "{name} needs the usage block");
+            assert!(body.contains("[~]"), "{name} should demo the three-state task");
+        }
 
-        fs::write(root.join("templates/笔记.md"), "# 我的模板\n").unwrap();
+        fs::write(root.join("templates/note.md"), "# 我的模板\n").unwrap();
         seed_builtin_templates(&root).unwrap();
-        let content = fs::read_to_string(root.join("templates/笔记.md")).unwrap();
+        let content = fs::read_to_string(root.join("templates/note.md")).unwrap();
         assert_eq!(content, "# 我的模板\n");
+
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn renames_legacy_chinese_templates_in_place() {
+        let root = std::env::temp_dir().join(format!("markdrawer-template-rename-{}", std::process::id()));
+        let dir = root.join("templates");
+        fs::create_dir_all(&dir).unwrap();
+        // A user-edited legacy template: the content must survive the rename.
+        fs::write(dir.join("笔记.md"), "# 我改过的模板\n").unwrap();
+
+        seed_builtin_templates(&root).unwrap();
+
+        assert!(!dir.join("笔记.md").exists());
+        let moved = fs::read_to_string(dir.join("note.md")).unwrap();
+        assert_eq!(moved, "# 我改过的模板\n");
+        let files: Vec<String> = fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .collect();
+        assert_eq!(files.len(), BUILTIN_TEMPLATES.len());
 
         fs::remove_dir_all(&root).ok();
     }

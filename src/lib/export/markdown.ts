@@ -56,6 +56,71 @@ function remarkCallout() {
   }
 }
 
+/**
+ * Task lists: GFM renders `[ ]` / `[x]` as a checkbox input, but `[~]` has no
+ * GFM meaning and arrives as literal text. Strip the marker and tag the item so
+ * the export theme can draw the in-progress state.
+ */
+function remarkTaskStatus() {
+  return (tree: unknown) => {
+    visit(tree, 'listItem', (node: any) => {
+      const paragraph = node.children?.[0]
+      const text = paragraph?.type === 'paragraph' ? paragraph.children?.[0] : undefined
+      const classes = ['task-list-item']
+
+      if (node.checked === true) {
+        classes.push('task-done')
+      } else if (node.checked === false) {
+        classes.push('task-todo')
+      } else if (text?.type === 'text') {
+        const doing = /^\[~\]\s?/.exec(text.value)
+        const empty = doing ? null : /^\[([ xX])\]\s*$/.exec(text.value)
+        if (doing) {
+          text.value = text.value.slice(doing[0].length)
+          if (text.value === '') paragraph.children.shift()
+          classes.push('task-doing')
+        } else if (empty) {
+          // `- [ ] ` / `- [x] ` (marker alone) is not a GFM task item, so the
+          // marker arrives as plain text; see editor/task-list.ts. No checkbox
+          // input is generated for these, hence the extra `task-empty` class
+          // that draws the box in CSS instead.
+          paragraph.children.shift()
+          classes.push('task-empty')
+          classes.push(empty[1].toLowerCase() === 'x' ? 'task-done' : 'task-todo')
+        } else {
+          return
+        }
+      } else {
+        return
+      }
+
+      node.data = {
+        ...(node.data ?? {}),
+        hProperties: { className: classes }
+      }
+    })
+
+    // mdast-util-to-hast only marks lists whose items carry a boolean
+    // `checked`; a list made purely of rescued empty markers needs it too.
+    visit(tree, 'list', (node: any) => {
+      const children: any[] = node.children ?? []
+      const isTask = children.some((child) =>
+        (child?.data?.hProperties?.className ?? []).includes('task-list-item')
+      )
+      if (!isTask) return
+      const current: string[] = node.data?.hProperties?.className ?? []
+      if (current.includes('contains-task-list')) return
+      node.data = {
+        ...(node.data ?? {}),
+        hProperties: {
+          ...(node.data?.hProperties ?? {}),
+          className: [...current, 'contains-task-list']
+        }
+      }
+    })
+  }
+}
+
 export async function renderMarkdown(markdown: string): Promise<string> {
   // YAML front matter is metadata, not document text: render it as a property
   // card instead of letting the Markdown parser turn the fences into rules.
@@ -65,6 +130,7 @@ export async function renderMarkdown(markdown: string): Promise<string> {
     .use(remarkGfm)
     .use(remarkMath)
     .use(remarkCallout)
+    .use(remarkTaskStatus)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeKatex)
     // Token classes (`hljs-*`) are coloured by the export theme's `--tok-*`

@@ -14,12 +14,14 @@
   --bg-active: #e4e7ea;
   --text: #546e7a;
   --text-muted: #5f757f;
-  --text-faint: #a6b2b8;
+  --text-faint: #7d8b92;
   --border: #e0e4e7;
   --border-strong: #cdd4d8;
   --accent: #4a6da8;
   --accent-soft: #e7ecf7;
   --accent-text: #ffffff;
+  --selection-bg: #b8cde7;
+  --selection-text: #1f2d36;
   --danger: #c62828;
   --warning: #a06100;
   --success: #3f7d28;
@@ -62,12 +64,14 @@
   --bg-active: #3a4160;
   --text: #a6accd;
   --text-muted: #949ab8;
-  --text-faint: #676e95;
+  --text-faint: #8b93b8;
   --border: #3a3f58;
   --border-strong: #4a5070;
   --accent: #82aaff;
   --accent-soft: #2c3a5a;
   --accent-text: #0f1420;
+  --selection-bg: #445072;
+  --selection-text: #f2f4ff;
   --danger: #f07178;
   --warning: #ffcb6b;
   --success: #c3e88d;
@@ -97,7 +101,7 @@
  * 语法高亮 token（--tok-*）：源码视图、编辑器代码块与导出共用。
  */
 :root {
-  --tok-comment: #90a4ae;
+  --tok-comment: #667a83;
   --tok-keyword: #7c4dff;
   --tok-string: #2e7d32;
   --tok-number: #ef6c00;
@@ -116,7 +120,7 @@
 }
 
 :root[data-theme='dark'] {
-  --tok-comment: #676e95;
+  --tok-comment: #8b93b8;
   --tok-keyword: #c792ea;
   --tok-string: #c3e88d;
   --tok-number: #f78c6c;

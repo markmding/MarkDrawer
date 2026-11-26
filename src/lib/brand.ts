@@ -5,7 +5,7 @@
 export const BRAND_NAME = 'Mark Drawer'
 export const BRAND_NAME_ZH = '文屉'
 export const BRAND_FULL = `${BRAND_NAME} ${BRAND_NAME_ZH}`
-export const BRAND_SLOGAN_ZH = '随文几屉 奇思几许'
+export const BRAND_SLOGAN_ZH = '随文一屉 奇思几许'
 export const BRAND_SLOGAN_EN = 'A drawer for words, a wonder or two'
 export const BRAND_DESC_ZH = '本地优先的 Markdown 编辑器：文件夹即抽屉，文字与灵感各安其位。'
 export const BRAND_DESC_EN =

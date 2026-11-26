@@ -11,12 +11,19 @@
   --bg-active: #e2e2e4;
   --text: #383a42;
   --text-muted: #696c77;
-  --text-faint: #a0a1a7;
+  --text-faint: #85888f;
   --border: #dcdcdc;
   --border-strong: #c9c9c9;
-  --accent: #4078f2;
+  --accent: #3a70e6;
   --accent-soft: #e8edfd;
   --accent-text: #ffffff;
+  /*
+   * Selection. The browser default is barely distinguishable from the page in
+   * dark themes, and `--accent-soft` is only a hint of tint; both are replaced
+   * by an explicit pair so selected text stays readable in every palette.
+   */
+  --selection-bg: #aecaf4;
+  --selection-text: #1f232b;
   --danger: #c0392b;
   --warning: #8a6100;
   --success: #2f7a34;
@@ -31,7 +38,7 @@
    * blocks inside Crepe) and the exported `hljs` markup read these, so a
    * theme only needs to redefine them to recolour all code at once.
    */
-  --tok-comment: #a0a1a7;
+  --tok-comment: #74777f;
   --tok-keyword: #a626a4;
   --tok-string: #50a14f;
   --tok-number: #986801;
@@ -76,18 +83,20 @@
   --bg-active: #3a3f4b;
   --text: #abb2bf;
   --text-muted: #9aa2b1;
-  --text-faint: #5c6370;
+  --text-faint: #767d8b;
   --border: #3a3f4b;
   --border-strong: #4b5263;
   --accent: #61afef;
   --accent-soft: #2b3a4a;
   --accent-text: #0e1620;
+  --selection-bg: #42586f;
+  --selection-text: #eef2f7;
   --danger: #e06c75;
   --warning: #e5c07b;
   --success: #98c379;
   --info: #56b6c2;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
-  --tok-comment: #5c6370;
+  --tok-comment: #848b99;
   --tok-keyword: #c678dd;
   --tok-string: #98c379;
   --tok-number: #d19a66;
@@ -108,6 +117,19 @@
 
 * {
   box-sizing: border-box;
+}
+
+/*
+ * Selected text. Every palette defines an explicit pair so the highlight is
+ * clearly separated from the page background and the selected glyphs keep
+ * their contrast — the OS default tracks the system accent instead, which on
+ * a dark page can sit only a few percent away from `--bg`.
+ */
+::selection {
+  /* The fallback keeps a user-supplied theme (which may predate the pair from
+   * defining a visible highlight instead of a transparent one). */
+  background-color: var(--selection-bg, color-mix(in srgb, var(--accent) 40%, var(--bg)));
+  color: var(--selection-text, inherit);
 }
 
 html,
@@ -288,12 +310,6 @@ textarea:focus {
 .menubar-spacer {
   flex: 1;
   align-self: stretch;
-}
-
-.menubar-sidebar {
-  height: 28px;
-  margin-right: 2px;
-  -webkit-app-region: no-drag;
 }
 
 .window-controls {
@@ -592,10 +608,40 @@ textarea:focus {
   display: flex;
   align-items: stretch;
   height: 36px;
+  min-width: 0;
   border-bottom: 1px solid var(--border);
   background: var(--bg-subtle);
+  overflow: hidden;
+}
+
+/* Only the tab list scrolls; the edge buttons stay pinned. */
+.tabbar-scroll {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
+}
+
+.tabbar-edge {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0 3px;
+}
+
+.tabbar-leading {
+  border-right: 1px solid var(--border);
+}
+
+.tabbar-trailing {
+  border-left: 1px solid var(--border);
+}
+
+.tabbar-edge-btn {
+  height: 28px;
+  -webkit-app-region: no-drag;
 }
 
 .tab {
@@ -679,6 +725,72 @@ textarea:focus {
 .conflict-bar .button.primary {
   background: var(--warning);
   color: var(--bg);
+}
+
+/* ---------- Find bar (in-document search) ---------- */
+
+.find-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.find-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.find-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 380px;
+  height: 28px;
+  padding: 0 9px;
+  font-size: 13px;
+}
+
+.find-count {
+  min-width: 46px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.find-nav {
+  width: 28px;
+  padding: 0;
+}
+
+.find-case {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.find-action {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+/*
+ * Match paint, shared by ProseMirror decorations and the CodeMirror field.
+ * Two classes: every hit gets `find-hit`, the one the counter points at adds
+ * `find-hit-active`.
+ */
+.find-hit {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--warning) 34%, transparent);
+}
+
+.find-hit-active {
+  background: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .editor-area {
@@ -835,6 +947,21 @@ textarea:focus {
 }
 
 /*
+ * Caret colour in the rich editor.
+ *
+ * prosemirror-virtual-cursor (enabled by Crepe) hides the native caret and
+ * draws a 2px line whose colour it reads from
+ * `--prosemirror-virtual-cursor-color`. Crepe points that variable at
+ * `--crepe-color-outline`, which this app maps to `--border` — a near-invisible
+ * line on the page background. Use the accent instead: every bundled theme
+ * defines it for both light and dark mode, and the source view already uses it
+ * for the CodeMirror caret.
+ */
+.editor-host .milkdown .ProseMirror {
+  --prosemirror-virtual-cursor-color: var(--accent);
+}
+
+/*
  * F2.7 long-document virtualization.
  *
  * Stage 1: let the browser skip layout/paint for blocks outside the viewport.
@@ -852,6 +979,18 @@ textarea:focus {
 .editor-host .milkdown .ProseMirror > .mk-block-detached {
   content-visibility: hidden;
   contain: layout style paint;
+}
+
+/* Task lists: the in-progress marker drawn instead of Crepe's checkbox */
+.editor-host .milkdown .milkdown-list-item-block .label .mk-task-doing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--callout-warning, #d97706);
+  font-size: 17px;
+  line-height: 1;
 }
 
 /* Callouts in the editor (marker stays in the AST, hidden visually) */
@@ -972,6 +1111,20 @@ textarea:focus {
   color: var(--danger);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.editor-stage {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/*
+ * The rich editor stays mounted while 源码 is shown so switching back is
+ * instant; `display: none` keeps it out of layout and paint.
+ */
+.editor-stage > .source-hidden {
+  display: none;
 }
 
 .editor-split {

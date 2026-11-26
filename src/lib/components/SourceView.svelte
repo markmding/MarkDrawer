@@ -8,6 +8,8 @@
   import { EditorView } from '@codemirror/view'
   import { untrack } from 'svelte'
   import { codeHighlighting, sourceEditorTheme } from '../editor/code-theme'
+  import { CodeFindEngine, findHighlightExtension } from '../editor/find-codemirror'
+  import { registerFindEngine, unregisterFindEngine } from '../editor/find.svelte'
   import { extractHeadings, GOTO_HEADING_EVENT } from '../markdown/headings'
 
   let {
@@ -50,6 +52,7 @@
           // source view along with the rest of the app.
           sourceEditorTheme,
           codeHighlighting,
+          findHighlightExtension,
           languageSlot.of(
             markdownFile
               ? markdown({ base: markdownLanguage, codeLanguages: languages })
@@ -71,6 +74,10 @@
     })
     view = instance
     onready?.(instance)
+    // Only the editable instance answers the find bar; the split mirror is a
+    // read-only copy of the same text.
+    const finder = readonly ? null : new CodeFindEngine(instance)
+    if (finder) registerFindEngine(finder)
 
     // Outline clicks: jump to the same heading in the source text. The line
     // numbers are recomputed from the current document, so they stay correct
@@ -110,7 +117,11 @@
     return () => {
       cancelled = true
       window.removeEventListener(GOTO_HEADING_EVENT, onGoto)
+      // Hand the bar back before the view goes away, so `unregister` can still
+      // clear its decorations.
+      if (finder) unregisterFindEngine(finder)
       instance.destroy()
+      finder?.destroy()
       if (view === instance) view = null
       onready?.(null)
     }

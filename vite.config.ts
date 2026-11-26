@@ -1,22 +1,41 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 // Tauri sets this when developing against a physical device / LAN.
 const host = process.env.TAURI_DEV_HOST
 
+const packageJsonPath = fileURLToPath(new URL('./package.json', import.meta.url))
+
 // package.json is the single source of truth for the app version; Tauri's
 // `version` points at the same file, so bundles and the UI always agree.
-const { version } = JSON.parse(
-  readFileSync(new URL('./package.json', import.meta.url), 'utf8')
-) as { version: string }
+const { version } = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version: string }
+
+/**
+ * `define` is baked when the server starts, so `npm run version:*` would leave a
+ * running dev server showing the previous number (the welcome page said 0.4.0
+ * for a whole round after the bump). Restarting is cheap and keeps the UI honest.
+ */
+function restartOnVersionChange(): Plugin {
+  return {
+    name: 'mark-drawer:version-restart',
+    configureServer(server) {
+      server.watcher.add(packageJsonPath)
+      server.watcher.on('change', (file) => {
+        if (file !== packageJsonPath) return
+        server.config.logger.info('[mark-drawer] package.json 已更新，重启以刷新 __APP_VERSION__')
+        server.restart()
+      })
+    }
+  }
+}
 
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(version)
   },
-  plugins: [svelte()],
+  plugins: [svelte(), restartOnVersionChange()],
   resolve: {
     alias: {
       $lib: fileURLToPath(new URL('./src/lib', import.meta.url))

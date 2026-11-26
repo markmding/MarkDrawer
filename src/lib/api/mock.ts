@@ -9,12 +9,12 @@ import materialTheme from '../../../src-tauri/themes/Material.css?raw'
 import monokaiTheme from '../../../src-tauri/themes/Monokai-Pro.css?raw'
 import nordTheme from '../../../src-tauri/themes/Nord.css?raw'
 // Same for the templates shipped in `templates/` next to the executable.
-import noteTemplate from '../../../src-tauri/templates/笔记.md?raw'
-import dailyTemplate from '../../../src-tauri/templates/每日笔记.md?raw'
-import todoTemplate from '../../../src-tauri/templates/任务清单.md?raw'
-import meetingTemplate from '../../../src-tauri/templates/会议记录.md?raw'
-import projectTemplate from '../../../src-tauri/templates/项目笔记.md?raw'
-import bookTemplate from '../../../src-tauri/templates/读书笔记.md?raw'
+import noteTemplate from '../../../src-tauri/templates/note.md?raw'
+import dailyTemplate from '../../../src-tauri/templates/daily.md?raw'
+import todoTemplate from '../../../src-tauri/templates/todo.md?raw'
+import meetingTemplate from '../../../src-tauri/templates/meeting.md?raw'
+import projectTemplate from '../../../src-tauri/templates/project.md?raw'
+import bookTemplate from '../../../src-tauri/templates/book.md?raw'
 import type {
   AssetFile,
   DocPayload,
@@ -40,7 +40,7 @@ created: 2026-11-24
 
 # 欢迎使用 Mark Drawer 文屉
 
-> 随文几屉 奇思几许。
+> 随文一屉 奇思几许。
 
 **文屉**是一个**本地优先**的 Markdown 编辑器：文件保存在你自己的文件夹里，使用标准 Markdown 存储。
 
@@ -91,9 +91,26 @@ const SHORTCUTS = `# 快捷键
 | ------ | ---- |
 | Ctrl + B | 加粗 |
 | Ctrl + I | 斜体 |
+| Ctrl + Alt + U | 删除线 |
+| Ctrl + Alt + E | 行内代码 |
 | Ctrl + S | 保存 |
 | Ctrl + N | 新建笔记 |
-| Ctrl + \\\\ | 切换源码视图 |
+| Ctrl + Alt + F | 在当前文档中查找 |
+| Ctrl + H | 查找并替换 |
+| Ctrl + Shift + F | 搜索抽屉（按文件名与内容） |
+| Ctrl + Alt + / | 切换源码视图 |
+| Ctrl + \\ | 分栏 |
+| Ctrl + Alt + L | 切换侧边栏 |
+| Ctrl + Alt + O | 切换大纲 |
+| Ctrl + Alt + 1…6 | 标题 1–6 级 |
+| Ctrl + Alt + 0 | 正文 |
+| Ctrl + Alt + Q | 引用 |
+| Ctrl + Alt + 8 / 7 | 无序 / 有序列表 |
+| Ctrl + Alt + K | 代码块 |
+| Ctrl + Alt + T | 表格 |
+| Ctrl + Enter | 切换任务状态（待办 → 进行中 → 完成） |
+
+> 格式类快捷键统一用 Ctrl + Alt：裸 Ctrl + K/L/U/Q 等会被 WebView2 的浏览器加速键截走。查找也同理（Ctrl + F 是浏览器的页内查找），因此改用 Ctrl + Alt + F。可在「选项 → 快捷键」里改回任意组合。
 `
 
 const EXPORT_GUIDE = `# 导出指南
@@ -103,20 +120,6 @@ const EXPORT_GUIDE = `# 导出指南
 - **PDF**：基于系统打印，支持页边距、页码起始值与页面范围。
 
 > 导出的样式跟随当前主题，主题需要包含 \`@media print\` 规则。
-`
-
-const DEMO_THEME = `/* Mark Drawer 示例主题：暖阳 */
-.milkdown .ProseMirror h1,
-.milkdown .ProseMirror h2,
-.mark-drawer-doc h1,
-.mark-drawer-doc h2 {
-  color: #b45309;
-}
-
-.milkdown .ProseMirror blockquote,
-.mark-drawer-doc blockquote {
-  border-left-color: #f59e0b;
-}
 `
 
 interface DocMeta {
@@ -143,13 +146,12 @@ function createState(): MockState {
     [WELCOME_DOC, WELCOME],
     ['指南/快捷键.md', SHORTCUTS],
     ['指南/导出指南.md', EXPORT_GUIDE],
-    ['templates/笔记.md', noteTemplate],
-    ['templates/每日笔记.md', dailyTemplate],
-    ['templates/任务清单.md', todoTemplate],
-    ['templates/会议记录.md', meetingTemplate],
-    ['templates/项目笔记.md', projectTemplate],
-    ['templates/读书笔记.md', bookTemplate],
-    ['themes/暖阳.css', DEMO_THEME],
+    ['templates/note.md', noteTemplate],
+    ['templates/daily.md', dailyTemplate],
+    ['templates/todo.md', todoTemplate],
+    ['templates/meeting.md', meetingTemplate],
+    ['templates/project.md', projectTemplate],
+    ['templates/book.md', bookTemplate],
     ['themes/Catppuccin.css', catppuccinTheme],
     ['themes/GitHub.css', githubTheme],
     ['themes/Material.css', materialTheme],

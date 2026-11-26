@@ -14,12 +14,14 @@
   --bg-active: #ccd0da;
   --text: #4c4f69;
   --text-muted: #63667c;
-  --text-faint: #9ca0b0;
+  --text-faint: #858a9a;
   --border: #ccd0da;
   --border-strong: #bcc0cc;
   --accent: #1e66f5;
   --accent-soft: #dce7fd;
   --accent-text: #ffffff;
+  --selection-bg: #adc3f0;
+  --selection-text: #2f3347;
   --danger: #d20f39;
   --warning: #a05f00;
   --success: #3f7d28;
@@ -68,6 +70,8 @@
   --accent: #89b4fa;
   --accent-soft: #2a3550;
   --accent-text: #11111b;
+  --selection-bg: #414c72;
+  --selection-text: #f5f7ff;
   --danger: #f38ba8;
   --warning: #f9e2af;
   --success: #a6e3a1;
@@ -98,7 +102,7 @@
  * Latte（浅色）
  */
 :root {
-  --tok-comment: #9ca0b0;
+  --tok-comment: #6b7083;
   --tok-keyword: #8839ef;
   --tok-string: #40a02b;
   --tok-number: #fe640b;
@@ -118,7 +122,7 @@
 
 /* Mocha（深色） */
 :root[data-theme='dark'] {
-  --tok-comment: #6c7086;
+  --tok-comment: #868aa3;
   --tok-keyword: #cba6f7;
   --tok-string: #a6e3a1;
   --tok-number: #fab387;

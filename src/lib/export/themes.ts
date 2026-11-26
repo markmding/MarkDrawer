@@ -171,6 +171,33 @@ img { max-width: 100%; height: auto; border-radius: 6px; }
 .callout-info .callout-title { color: var(--mk-callout-info); }
 .callout-success { border-left-color: var(--mk-callout-success); }
 .callout-success .callout-title { color: var(--mk-callout-success); }
+/* Task lists: [ ] todo, [~] doing, [x] done */
+ul.contains-task-list { padding-left: 1.35em; }
+.task-list-item { list-style: none; }
+.task-list-item input[type="checkbox"] {
+  width: .95em;
+  height: .95em;
+  margin: 0 .5em 0 -1.35em;
+  vertical-align: -0.08em;
+  accent-color: var(--mk-accent);
+}
+.task-done > p { color: var(--mk-muted); text-decoration: line-through; }
+/* Marker-only items ("- [ ] " with nothing after it) carry no checkbox input;
+   draw the box so the empty template rows still read as task items. */
+.task-empty.task-todo::before,
+.task-empty.task-done::before {
+  content: '☐';
+  color: var(--mk-muted);
+  margin-right: .5em;
+  margin-left: -1.35em;
+}
+.task-empty.task-done::before { content: '☑'; color: var(--mk-accent); }
+.task-doing::before {
+  content: '◐';
+  color: var(--mk-callout-warning, #d97706);
+  margin-right: .5em;
+  margin-left: -1.35em;
+}
 .mermaid-diagram { margin: 1.2em 0; text-align: center; }
 .mermaid-diagram svg { max-width: 100%; height: auto; }
 .mermaid-error { border-color: var(--mk-callout-danger); }

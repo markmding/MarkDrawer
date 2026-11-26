@@ -1,15 +1,6 @@
 <script lang="ts">
   // MARK#EZVE.COM
-  import { t, LOCALES, type Locale, type MessageKey } from '../i18n'
-  import {
-    comboFromEvent,
-    displayCombo,
-    resolveShortcuts,
-    SHORTCUT_DEFS,
-    shortcutConflict,
-    type ShortcutGroup,
-    type ShortcutId
-  } from '../shortcuts'
+  import { t, LOCALES, localeLabel, type Language, type MessageKey } from '../i18n'
   import {
     settings,
     type AppTheme,
@@ -17,72 +8,36 @@
   } from '../stores/settings.svelte'
   import { themes } from '../stores/themes.svelte'
 
-  let {
-    open,
-    onclose,
-    section = ''
-  }: { open: boolean; onclose: () => void; section?: string } = $props()
+  let { open, onclose }: { open: boolean; onclose: () => void } = $props()
 
   const s = $derived(settings.value)
-  const resolved = $derived(resolveShortcuts(s.shortcuts))
 
-  const GROUPS: { id: ShortcutGroup; labelKey: MessageKey }[] = [
-    { id: 'app', labelKey: 'settings.shortcutGroupApp' },
-    { id: 'view', labelKey: 'settings.shortcutGroupView' },
-    { id: 'format', labelKey: 'settings.shortcutGroupFormat' }
+  /** Autosave interval presets, in seconds: 10 s … 1 h. */
+  const INTERVAL_PRESETS: { seconds: number; labelKey: MessageKey }[] = [
+    { seconds: 10, labelKey: 'settings.interval10s' },
+    { seconds: 30, labelKey: 'settings.interval30s' },
+    { seconds: 60, labelKey: 'settings.interval1m' },
+    { seconds: 300, labelKey: 'settings.interval5m' },
+    { seconds: 900, labelKey: 'settings.interval15m' },
+    { seconds: 1800, labelKey: 'settings.interval30m' },
+    { seconds: 3600, labelKey: 'settings.interval1h' }
   ]
 
-  let recording = $state<ShortcutId | null>(null)
-  let conflict = $state('')
-
-  // Closing the dialog always ends a pending recording.
-  $effect(() => {
-    if (!open) {
-      recording = null
-      conflict = ''
+  // A value stored by the old slider (10–300 s, step 5) may not match a preset;
+  // keep it selectable instead of silently snapping it to a neighbour.
+  const intervalOptions = $derived.by(() => {
+    const list = INTERVAL_PRESETS.map((preset) => ({
+      seconds: preset.seconds,
+      label: t(preset.labelKey)
+    }))
+    if (!list.some((option) => option.seconds === s.autosaveInterval)) {
+      list.push({
+        seconds: s.autosaveInterval,
+        label: t('settings.intervalCustom', { seconds: s.autosaveInterval })
+      })
+      list.sort((a, b) => a.seconds - b.seconds)
     }
-  })
-
-  // Captured so the app-level handler never sees the keys being recorded.
-  $effect(() => {
-    const id = recording
-    if (!id || !open) return
-    const onKey = (event: KeyboardEvent) => {
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.key === 'Escape') {
-        recording = null
-        conflict = ''
-        return
-      }
-      if (event.key === 'Backspace' || event.key === 'Delete') {
-        settings.resetShortcut(id)
-        recording = null
-        conflict = ''
-        return
-      }
-      const combo = comboFromEvent(event)
-      if (!combo) return
-      const clash = shortcutConflict(id, combo, resolveShortcuts(settings.value.shortcuts))
-      if (clash) {
-        conflict = t('settings.shortcutConflict', { name: t(clash.labelKey) })
-        return
-      }
-      settings.setShortcut(id, combo)
-      recording = null
-      conflict = ''
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  })
-
-  // Opened from 选项 → 自定义快捷键: bring the section into view.
-  $effect(() => {
-    if (!open || section !== 'shortcuts') return
-    const frame = requestAnimationFrame(() => {
-      document.getElementById('settings-shortcuts')?.scrollIntoView({ block: 'start' })
-    })
-    return () => cancelAnimationFrame(frame)
+    return list
   })
 
   function update<K extends keyof SettingsState>(key: K, value: SettingsState[K]): void {
@@ -116,10 +71,10 @@
           <select
             id="language"
             value={s.language}
-            onchange={(event) => update('language', event.currentTarget.value as Locale)}
+            onchange={(event) => update('language', event.currentTarget.value as Language)}
           >
-            {#each LOCALES as locale (locale.value)}
-              <option value={locale.value}>{locale.label}</option>
+            {#each LOCALES as locale (locale)}
+              <option value={locale}>{localeLabel(locale)}</option>
             {/each}
           </select>
           <span class="hint">{t('settings.languageHint')}</span>
@@ -183,10 +138,22 @@
         </div>
 
         <h3 style="font-size:13px;margin:18px 0 4px">{t('settings.autosave')}</h3>
+        <!-- Interval on the left, switch on the right: one row, no layout jump. -->
         <div class="switch-row">
           <div class="switch-label">
-            <strong>{t('settings.timer')}</strong>
-            <span>{t('settings.timerHint')}</span>
+            <strong>{t('settings.intervalLabel')}</strong>
+            <select
+              id="interval"
+              value={String(s.autosaveInterval)}
+              disabled={!s.autosaveTimer}
+              aria-label={t('settings.intervalLabel')}
+              style="margin-top:6px;max-width:220px"
+              onchange={(event) => update('autosaveInterval', Number(event.currentTarget.value))}
+            >
+              {#each intervalOptions as option (option.seconds)}
+                <option value={String(option.seconds)}>{option.label}</option>
+              {/each}
+            </select>
           </div>
           <button
             class="switch"
@@ -194,23 +161,10 @@
             role="switch"
             aria-checked={s.autosaveTimer}
             aria-label={t('settings.timer')}
+            title={t('settings.timerHint')}
             onclick={() => update('autosaveTimer', !s.autosaveTimer)}
           ></button>
         </div>
-        {#if s.autosaveTimer}
-          <div class="field" style="margin:6px 0 12px">
-            <label for="interval">{t('settings.interval', { seconds: s.autosaveInterval })}</label>
-            <input
-              id="interval"
-              type="range"
-              min="10"
-              max="300"
-              step="5"
-              value={s.autosaveInterval}
-              oninput={(event) => update('autosaveInterval', Number(event.currentTarget.value))}
-            />
-          </div>
-        {/if}
         <div class="switch-row">
           <div class="switch-label">
             <strong>{t('settings.blur')}</strong>
@@ -296,47 +250,6 @@
             />
           </div>
         </div>
-
-        <div class="shortcut-head" id="settings-shortcuts">
-          <h3 style="font-size:13px;margin:18px 0 4px">{t('settings.shortcuts')}</h3>
-          <button class="button" style="height:26px" onclick={() => settings.resetAllShortcuts()}>
-            {t('settings.shortcutResetAll')}
-          </button>
-        </div>
-        <p class="hint" style="margin:0 0 10px">{t('settings.shortcutsHint')}</p>
-        {#each GROUPS as group (group.id)}
-          <h4 class="shortcut-group">{t(group.labelKey)}</h4>
-          <div class="shortcut-list">
-            {#each SHORTCUT_DEFS.filter((def) => def.group === group.id) as def (def.id)}
-              <div class="shortcut-row" class:active={recording === def.id}>
-                <span class="shortcut-name">{t(def.labelKey)}</span>
-                <button
-                  class="shortcut-key"
-                  class:recording={recording === def.id}
-                  aria-label={`${t(def.labelKey)}: ${
-                    recording === def.id ? t('settings.shortcutRecording') : resolved[def.id]
-                  }`}
-                  onclick={() => {
-                    recording = def.id
-                    conflict = ''
-                  }}
-                >
-                  {recording === def.id ? t('settings.shortcutRecording') : displayCombo(resolved[def.id])}
-                </button>
-                <button
-                  class="icon-btn shortcut-reset"
-                  title={t('settings.shortcutReset')}
-                  aria-label={t('settings.shortcutReset')}
-                  disabled={!s.shortcuts[def.id]}
-                  onclick={() => settings.resetShortcut(def.id)}
-                >
-                  ↺
-                </button>
-              </div>
-            {/each}
-          </div>
-        {/each}
-        {#if conflict}<p class="shortcut-conflict">{conflict}</p>{/if}
 
         <p class="hint" style="margin-top:18px">
           {t('settings.footnote')}

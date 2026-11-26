@@ -4,15 +4,25 @@ import { en } from './en'
 import { zhCN, type MessageKey } from './zh-CN'
 
 export type { MessageKey }
-export type Locale = Language
+export type { Language }
+/** Concrete locale after `system` has been resolved. */
+export type Locale = 'zh' | 'en'
 
-export const LOCALES: { value: Locale; label: string }[] = [
-  { value: 'zh', label: '中文' },
-  { value: 'en', label: 'English' }
-]
+/**
+ * Language choices, in display order. `system` comes first because it is the
+ * default for a fresh install; concrete choices stay available for anyone who
+ * wants the interface in a specific language regardless of the OS.
+ */
+export const LOCALES: Language[] = ['system', 'zh', 'en']
 
 export function currentLocale(): Locale {
-  return settings.value.language
+  return settings.resolvedLanguage
+}
+
+/** Endonyms for concrete languages; `system` is shown translated. */
+export function localeLabel(language: Language): string {
+  if (language === 'system') return t('settings.languageSystem')
+  return language === 'en' ? 'English' : '中文'
 }
 
 /**

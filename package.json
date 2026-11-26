@@ -1,7 +1,7 @@
 {
   "name": "mark-drawer",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.7.1",
   "type": "module",
   "description": "Mark Drawer 文屉 — a local-first Markdown drawer",
   "scripts": {
@@ -16,8 +16,10 @@
     "icons": "node tools/gen-icons.mjs",
     "tauri": "tauri",
     "desktop": "tauri dev",
-    "desktop:build": "npm run version:check && tauri build",
-    "package:portable": "npm run version:check && node tools/package-portable.mjs"
+    "desktop:build": "npm run version:check && tauri build --no-bundle",
+    "desktop:installer": "npm run version:check && tauri build",
+    "package:portable": "npm run version:check && node tools/package-portable.mjs",
+    "package:source": "npm run version:check && node tools/package-source.mjs"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.4",

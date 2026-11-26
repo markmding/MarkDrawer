@@ -3,10 +3,12 @@
   import { onMount } from 'svelte'
   import ConflictBar from './lib/components/ConflictBar.svelte'
   import EditorPane from './lib/components/EditorPane.svelte'
+  import FindBar from './lib/components/FindBar.svelte'
   import LazyExportDialog from './lib/components/LazyExportDialog.svelte'
   import NewDocDialog from './lib/components/NewDocDialog.svelte'
   import Outline from './lib/components/Outline.svelte'
   import SettingsDialog from './lib/components/SettingsDialog.svelte'
+  import ShortcutsDialog from './lib/components/ShortcutsDialog.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import StatusBar from './lib/components/StatusBar.svelte'
   import TabBar from './lib/components/TabBar.svelte'
@@ -16,6 +18,7 @@
   import { listenOpenFile, listenDrawerChanges, takeLaunchFile } from './lib/api/tauri'
   import { APP_VERSION, BRAND_NAME, BRAND_NAME_ZH, BRAND_SLOGAN_EN, BRAND_SLOGAN_ZH, WELCOME_DOC } from './lib/brand'
   import { runEditorAction, type EditorAction } from './lib/editor/actions'
+  import { closeFind, findState, openFind } from './lib/editor/find.svelte'
   import { FRONTMATTER_EVENT } from './lib/editor/frontmatter-view'
   import { isEnglish, t } from './lib/i18n'
   import { basename, dirname } from './lib/paths'
@@ -26,7 +29,7 @@
     SHORTCUT_DEFS,
     type ShortcutId
   } from './lib/shortcuts'
-  import { settings } from './lib/stores/settings.svelte'
+  import { OUTLINE_STORAGE_KEY, settings } from './lib/stores/settings.svelte'
   import { tabs } from './lib/stores/tabs.svelte'
   import { themes } from './lib/stores/themes.svelte'
   import { drawer } from './lib/stores/drawer.svelte'
@@ -36,12 +39,13 @@
   // Outline visibility is a UI preference, not a document setting; keep it in
   // localStorage so it survives restarts without touching the settings file.
   let outlineVisible = $state(
-    typeof localStorage !== 'undefined' && localStorage.getItem('markdrawer.outline') === '1'
+    typeof localStorage !== 'undefined' && localStorage.getItem(OUTLINE_STORAGE_KEY) === '1'
   )
   let showExport = $state(false)
   let showSettings = $state(false)
-  /** Settings section to scroll to when the dialog opens (e.g. `shortcuts`). */
-  let settingsSection = $state('')
+  // Keyboard bindings live in their own dialog; the settings page stays a
+  // plain preferences list.
+  let showShortcuts = $state(false)
   let showNewDoc = $state(false)
   let showAbout = $state(false)
   let newDocFolder = $state('')
@@ -86,6 +90,12 @@
           label: t('menu.newNote'),
           shortcut: displayCombo(shortcuts.newNote),
           run: () => void openNewDoc()
+        },
+        {
+          label: t('menu.searchDrawer'),
+          shortcut: displayCombo(shortcuts.searchDrawer),
+          disabled: !drawer.isOpen,
+          run: focusDrawerSearch
         },
         { separator: true },
         {
@@ -132,7 +142,18 @@
           disabled: !tabs.active,
           run: () => editCommand('selectAll')
         },
-        { label: t('menu.find'), shortcut: displayCombo(shortcuts.find), run: focusSearch }
+        {
+          label: t('menu.find'),
+          shortcut: displayCombo(shortcuts.find),
+          disabled: !tabs.active,
+          run: () => openFind(false)
+        },
+        {
+          label: t('menu.replace'),
+          shortcut: displayCombo(shortcuts.replace),
+          disabled: !tabs.active,
+          run: () => openFind(true)
+        }
       ]
     },
     {
@@ -147,6 +168,9 @@
         { label: t('menu.h1'), shortcut: displayCombo(shortcuts.heading1), disabled: !canFormat, run: () => format('heading1') },
         { label: t('menu.h2'), shortcut: displayCombo(shortcuts.heading2), disabled: !canFormat, run: () => format('heading2') },
         { label: t('menu.h3'), shortcut: displayCombo(shortcuts.heading3), disabled: !canFormat, run: () => format('heading3') },
+        { label: t('menu.h4'), shortcut: displayCombo(shortcuts.heading4), disabled: !canFormat, run: () => format('heading4') },
+        { label: t('menu.h5'), shortcut: displayCombo(shortcuts.heading5), disabled: !canFormat, run: () => format('heading5') },
+        { label: t('menu.h6'), shortcut: displayCombo(shortcuts.heading6), disabled: !canFormat, run: () => format('heading6') },
         { label: t('menu.paragraph'), shortcut: displayCombo(shortcuts.paragraph), disabled: !canFormat, run: () => format('paragraph') },
         { separator: true },
         { label: t('menu.quote'), shortcut: displayCombo(shortcuts.blockquote), disabled: !canFormat, run: () => format('blockquote') },
@@ -154,7 +178,8 @@
         { label: t('menu.orderedList'), shortcut: displayCombo(shortcuts.orderedList), disabled: !canFormat, run: () => format('orderedList') },
         { separator: true },
         { label: t('menu.codeBlock'), shortcut: displayCombo(shortcuts.codeBlock), disabled: !canFormat, run: () => format('codeBlock') },
-        { label: t('menu.table'), shortcut: displayCombo(shortcuts.table), disabled: !canFormat, run: () => format('table') }
+        { label: t('menu.table'), shortcut: displayCombo(shortcuts.table), disabled: !canFormat, run: () => format('table') },
+        { label: t('menu.taskStatus'), shortcut: displayCombo(shortcuts.taskStatus), disabled: !canFormat, run: () => format('taskStatus') }
       ]
     },
     {
@@ -176,6 +201,7 @@
         },
         {
           label: t('menu.split'),
+          shortcut: displayCombo(shortcuts.split),
           checked: viewMode === 'split',
           disabled: textTabActive,
           run: () => (viewMode = 'split')
@@ -183,6 +209,7 @@
         { separator: true },
         {
           label: t('menu.toggleSidebar'),
+          shortcut: displayCombo(shortcuts.toggleSidebar),
           checked: settings.value.sidebarVisible,
           run: toggleSidebar
         },
@@ -201,18 +228,12 @@
       entries: [
         {
           label: t('menu.customizeShortcuts'),
-          run: () => {
-            settingsSection = 'shortcuts'
-            showSettings = true
-          }
+          run: () => (showShortcuts = true)
         },
         {
           label: t('menu.settings'),
           shortcut: displayCombo(shortcuts.settings),
-          run: () => {
-            settingsSection = ''
-            showSettings = true
-          }
+          run: () => (showSettings = true)
         }
       ]
     },
@@ -234,6 +255,8 @@
     'newNote',
     'closeTab',
     'find',
+    'replace',
+    'searchDrawer',
     'settings'
   ])
 
@@ -245,12 +268,16 @@
     heading1: 'heading1',
     heading2: 'heading2',
     heading3: 'heading3',
+    heading4: 'heading4',
+    heading5: 'heading5',
+    heading6: 'heading6',
     paragraph: 'paragraph',
     blockquote: 'blockquote',
     bulletList: 'bulletList',
     orderedList: 'orderedList',
     codeBlock: 'codeBlock',
-    table: 'table'
+    table: 'table',
+    taskStatus: 'taskStatus'
   }
 
   /**
@@ -290,15 +317,30 @@
         editCommand(id)
         return true
       case 'find':
-        focusSearch()
+        if (!tabs.active) return false
+        openFind(false)
+        return true
+      case 'replace':
+        if (!tabs.active) return false
+        openFind(true)
+        return true
+      case 'searchDrawer':
+        if (!drawer.isOpen) return false
+        focusDrawerSearch()
         return true
       case 'settings':
-        settingsSection = ''
         showSettings = true
         return true
       case 'toggleSource':
         if (!markdownTabActive) return false
         viewMode = viewMode === 'wysiwyg' ? 'source' : 'wysiwyg'
+        return true
+      case 'split':
+        if (!markdownTabActive) return false
+        viewMode = 'split'
+        return true
+      case 'toggleSidebar':
+        toggleSidebar()
         return true
       case 'outline':
         if (!markdownTabActive) return false
@@ -325,7 +367,8 @@
   // F2.8 timer autosave — independent from blur autosave.
   $effect(() => {
     const enabled = settings.value.autosaveTimer
-    const seconds = Math.min(300, Math.max(10, settings.value.autosaveInterval))
+    // Presets run from 10 s to 1 h; the ceiling only guards a corrupt value.
+    const seconds = Math.min(86400, Math.max(10, settings.value.autosaveInterval))
     if (!enabled) return
     const timer = setInterval(() => void tabs.saveAll(), seconds * 1000)
     return () => clearInterval(timer)
@@ -375,6 +418,12 @@
     const onKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && openMenu) {
         openMenu = null
+        return
+      }
+      // Esc from the editor closes the find bar; the bar's own handler covers
+      // the case where focus is already inside it.
+      if (event.key === 'Escape' && findState.open && !event.defaultPrevented) {
+        closeFind()
         return
       }
       if (event.defaultPrevented) return
@@ -522,7 +571,7 @@
   function toggleOutline(): void {
     outlineVisible = !outlineVisible
     try {
-      localStorage.setItem('markdrawer.outline', outlineVisible ? '1' : '0')
+      localStorage.setItem(OUTLINE_STORAGE_KEY, outlineVisible ? '1' : '0')
     } catch {
       // Private/storage-disabled contexts: the panel still toggles for now.
     }
@@ -585,7 +634,8 @@
     if (tab) tabs.close(tab.id)
   }
 
-  function focusSearch(): void {
+  /** File ▸ 搜索抽屉: filters the sidebar by file name and content. */
+  function focusDrawerSearch(): void {
     if (!settings.value.sidebarVisible) {
       settings.update({ sidebarVisible: true })
     }
@@ -665,21 +715,6 @@
 
     <div class="menubar-spacer" data-tauri-drag-region></div>
 
-    <button
-      class="icon-btn menubar-sidebar"
-      class:active={settings.value.sidebarVisible}
-      title={t('app.sidebarToggle')}
-      aria-label={t('app.sidebarToggle')}
-      onclick={toggleSidebar}>☰</button>
-
-    <button
-      class="icon-btn menubar-sidebar"
-      class:active={outlineVisible}
-      title={t('menu.toggleOutline')}
-      aria-label={t('menu.toggleOutline')}
-      disabled={!markdownTabActive}
-      onclick={toggleOutline}>≣</button>
-
     {#if IS_TAURI}
       <div class="window-controls">
         <button
@@ -701,7 +736,25 @@
     {/if}
   </header>
 
-  <TabBar onnew={() => void openNewDoc()} />
+  <TabBar onnew={() => void openNewDoc()}>
+    {#snippet leading()}
+      <button
+        class="icon-btn tabbar-edge-btn"
+        class:active={settings.value.sidebarVisible}
+        title={t('app.sidebarToggle')}
+        aria-label={t('app.sidebarToggle')}
+        onclick={toggleSidebar}>☰</button>
+    {/snippet}
+    {#snippet trailing()}
+      <button
+        class="icon-btn tabbar-edge-btn"
+        class:active={outlineVisible}
+        title={t('menu.toggleOutline')}
+        aria-label={t('menu.toggleOutline')}
+        disabled={!markdownTabActive}
+        onclick={toggleOutline}>≣</button>
+    {/snippet}
+  </TabBar>
 
   {#if drawer.isOpen}
     <Sidebar onnew={openNewDoc} />
@@ -711,6 +764,7 @@
 
   <main class="main">
     <ConflictBar />
+    <FindBar />
     <div class="editor-area">
       <div class="editor-main">
         {#if tabs.active}
@@ -752,14 +806,8 @@
   onclose={() => (showNewDoc = false)}
   oncreate={createNewDoc}
 />
-<SettingsDialog
-  open={showSettings}
-  section={settingsSection}
-  onclose={() => {
-    showSettings = false
-    settingsSection = ''
-  }}
-/>
+<SettingsDialog open={showSettings} onclose={() => (showSettings = false)} />
+<ShortcutsDialog open={showShortcuts} onclose={() => (showShortcuts = false)} />
 
 {#if showAbout}
   <div

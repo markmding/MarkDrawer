@@ -28,12 +28,17 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "nsis"
+    ],
     "category": "Productivity",
     "shortDescription": "Mark Drawer 文屉 — a local-first Markdown drawer",
     "fileAssociations": [
       {
-        "ext": ["md", "markdown"],
+        "ext": [
+          "md",
+          "markdown"
+        ],
         "name": "MarkDrawer.Markdown",
         "description": "Markdown document",
         "role": "Editor",

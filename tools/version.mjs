@@ -15,8 +15,9 @@
  *                                     # 0.4.0-dev.1 → 0.4.0-dev.2
  *   node tools/version.mjs release    # 0.4.0-dev.2 → 0.4.0
  *   node tools/version.mjs bump major|minor|patch
+ *   node tools/version.mjs set 0.5.0-dev.1   # 显式设定（同一命令写 Cargo.toml 与 CHANGELOG）
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -55,12 +56,16 @@ function cargoVersions() {
   )
 }
 
+// 源码包（npm run package:source）按规则不带 CHANGELOG.md，此时版本检查跳过
+// 条目校验，而不是直接失败——否则解压出来的源码树连 npm run build 都跑不了。
 function changelogHas(version) {
+  if (!existsSync(FILES.changelog)) return true
   return readFileSync(FILES.changelog, 'utf8').includes(`## [${version}]`)
 }
 
 function insertChangelogHeading(version) {
   const file = FILES.changelog
+  if (!existsSync(file)) return
   const text = readFileSync(file, 'utf8')
   if (text.includes(`## [${version}]`)) return
   const lines = text.split(/\r?\n/)
@@ -105,7 +110,9 @@ function check() {
     }
   }
 
-  if (!changelogHas(version)) {
+  if (!existsSync(FILES.changelog)) {
+    console.log('CHANGELOG.md 不存在（源码包不带变更日志），跳过版本条目检查')
+  } else if (!changelogHas(version)) {
     problems.push(`CHANGELOG.md 缺少 "## [${version}]" 条目`)
   }
 

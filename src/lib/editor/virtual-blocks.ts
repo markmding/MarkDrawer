@@ -182,6 +182,46 @@ class VirtualBlockView implements NodeView {
     // reconciliation works against the live content node instead of the
     // fragment we parked the children in.
     if (this.detached) this.attach()
+    // A node view owns the outer element, so ProseMirror stops applying
+    // `toDOM` to it. Returning true unconditionally therefore leaves the old
+    // tag and attributes in place while the document moves on — 标题 1→3 kept
+    // rendering `<h1>`, and the heading `id` went stale after a rename. Mirror
+    // what the built-in view does: patch attributes in place, and only let
+    // ProseMirror rebuild when the tag itself has to change.
+    return this.syncOuterDom(node)
+  }
+
+  /**
+   * Brings the outer element in line with `toDOM(node)`.
+   *
+   * Returns false when the tag name differs (h2 → h4, p → blockquote,
+   * ul → ol): the element cannot be renamed in place because ProseMirror
+   * keeps a reference to it, so the caller lets it rebuild the node view.
+   */
+  private syncOuterDom(node: ProseNode): boolean {
+    const spec = node.type.spec.toDOM?.(node)
+    if (!spec) return true
+    const doc = this.dom.ownerDocument ?? document
+    const rendered = DOMSerializer.renderSpec(doc, spec)
+    const next = rendered.dom as Element
+    if (next.nodeName !== this.dom.nodeName) return false
+
+    for (const name of this.dom.getAttributeNames()) {
+      // `class`/`style` carry view-local state: the virtualization markers and
+      // the measured min-height of a detached block.
+      if (name === 'class' || name === 'style') continue
+      if (!next.hasAttribute(name)) this.dom.removeAttribute(name)
+    }
+    for (const { name, value } of Array.from(next.attributes)) {
+      if (name === 'class' || name === 'style') continue
+      if (this.dom.getAttribute(name) !== value) this.dom.setAttribute(name, value)
+    }
+    const nextClass = next.getAttribute('class')
+    if (nextClass) {
+      for (const token of nextClass.split(/\s+/)) {
+        if (token && !this.dom.classList.contains(token)) this.dom.classList.add(token)
+      }
+    }
     return true
   }
 

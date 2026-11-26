@@ -78,7 +78,7 @@ export const sourceEditorTheme = EditorView.theme(
     '.cm-content': { caretColor: 'var(--accent)' },
     '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)' },
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-      backgroundColor: 'var(--accent-soft)'
+      backgroundColor: 'var(--selection-bg, color-mix(in srgb, var(--accent) 40%, var(--bg)))',
     },
     '.cm-gutters': {
       backgroundColor: 'var(--bg)',
@@ -121,7 +121,7 @@ export const codeBlockEditorTheme = EditorView.theme(
     '.cm-content': { caretColor: 'var(--accent)', fontFamily: 'var(--mono)' },
     '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)' },
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-      backgroundColor: 'var(--accent-soft)'
+      backgroundColor: 'var(--selection-bg, color-mix(in srgb, var(--accent) 40%, var(--bg)))',
     },
     '.cm-gutters': { display: 'none' },
     '.cm-activeLine': { backgroundColor: 'transparent' },

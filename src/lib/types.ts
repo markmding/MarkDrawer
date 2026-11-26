@@ -67,7 +67,7 @@ export interface SaveAttachmentResult {
 /** Read-only resource stored next to the executable (theme or template). */
 export interface AssetFile {
   name: string
-  /** App-relative path, e.g. `themes/暖阳.css` */
+  /** App-relative path, e.g. `themes/Nord.css` */
   path: string
   content: string
 }

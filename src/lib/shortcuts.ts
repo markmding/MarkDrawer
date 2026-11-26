@@ -30,25 +30,47 @@ export const SHORTCUT_DEFS = [
   { id: 'undo', labelKey: 'menu.undo', group: 'app', defaultCombo: 'Ctrl+Z' },
   { id: 'redo', labelKey: 'menu.redo', group: 'app', defaultCombo: 'Ctrl+Shift+Z' },
   { id: 'selectAll', labelKey: 'menu.selectAll', group: 'app', defaultCombo: 'Ctrl+A' },
-  { id: 'find', labelKey: 'menu.find', group: 'app', defaultCombo: 'Ctrl+F' },
+  // 查找/替换作用于当前文档；搜抽屉（按文件名与内容过滤侧边栏）属于文件级操作。
+  // Ctrl+F 是 Chromium/WebView2 的页内查找加速键，应用层收不到；与格式类快捷键同样让到 Ctrl+Alt。
+  { id: 'find', labelKey: 'menu.find', group: 'app', defaultCombo: 'Ctrl+Alt+F' },
+  { id: 'replace', labelKey: 'menu.replace', group: 'app', defaultCombo: 'Ctrl+H' },
+  {
+    id: 'searchDrawer',
+    labelKey: 'menu.searchDrawer',
+    group: 'app',
+    defaultCombo: 'Ctrl+Shift+F'
+  },
   { id: 'settings', labelKey: 'menu.settings', group: 'app', defaultCombo: 'Ctrl+,' },
   // 视图
-  { id: 'toggleSource', labelKey: 'menu.source', group: 'view', defaultCombo: 'Ctrl+\\' },
-  { id: 'outline', labelKey: 'menu.outline', group: 'view', defaultCombo: 'Ctrl+Shift+O' },
+  // Ctrl+/ 在源码视图里属于 CodeMirror 的「切换注释」，会先 preventDefault，
+  // 应用层收不到，所以切换源码改用 Ctrl+Alt+/。
+  { id: 'toggleSource', labelKey: 'menu.source', group: 'view', defaultCombo: 'Ctrl+Alt+/' },
+  { id: 'split', labelKey: 'menu.split', group: 'view', defaultCombo: 'Ctrl+\\' },
+  { id: 'toggleSidebar', labelKey: 'menu.toggleSidebar', group: 'view', defaultCombo: 'Ctrl+Alt+L' },
+  { id: 'outline', labelKey: 'menu.outline', group: 'view', defaultCombo: 'Ctrl+Alt+O' },
   // 格式
   { id: 'bold', labelKey: 'menu.bold', group: 'format', defaultCombo: 'Ctrl+B' },
   { id: 'italic', labelKey: 'menu.italic', group: 'format', defaultCombo: 'Ctrl+I' },
-  { id: 'strikethrough', labelKey: 'menu.strikethrough', group: 'format', defaultCombo: 'Ctrl+Shift+X' },
-  { id: 'inlineCode', labelKey: 'menu.inlineCode', group: 'format', defaultCombo: 'Ctrl+E' },
+  // 0.7 起格式键统一改用 Ctrl+Alt：裸 Ctrl+K/L/U/Q 已被 WebView2 的浏览器加速键
+  // 吞掉（桌面端实测失效），Ctrl+1…6 / Ctrl+0 / Ctrl+T / Ctrl+E 属于同一类
+  // Chromium 原生命令（切标签页、缩放复位、新标签、搜索），一并避开。
+  { id: 'strikethrough', labelKey: 'menu.strikethrough', group: 'format', defaultCombo: 'Ctrl+Alt+U' },
+  { id: 'inlineCode', labelKey: 'menu.inlineCode', group: 'format', defaultCombo: 'Ctrl+Alt+E' },
   { id: 'heading1', labelKey: 'menu.h1', group: 'format', defaultCombo: 'Ctrl+Alt+1' },
   { id: 'heading2', labelKey: 'menu.h2', group: 'format', defaultCombo: 'Ctrl+Alt+2' },
   { id: 'heading3', labelKey: 'menu.h3', group: 'format', defaultCombo: 'Ctrl+Alt+3' },
+  { id: 'heading4', labelKey: 'menu.h4', group: 'format', defaultCombo: 'Ctrl+Alt+4' },
+  { id: 'heading5', labelKey: 'menu.h5', group: 'format', defaultCombo: 'Ctrl+Alt+5' },
+  { id: 'heading6', labelKey: 'menu.h6', group: 'format', defaultCombo: 'Ctrl+Alt+6' },
   { id: 'paragraph', labelKey: 'menu.paragraph', group: 'format', defaultCombo: 'Ctrl+Alt+0' },
-  { id: 'blockquote', labelKey: 'menu.quote', group: 'format', defaultCombo: 'Ctrl+Shift+Q' },
-  { id: 'bulletList', labelKey: 'menu.bulletList', group: 'format', defaultCombo: 'Ctrl+Shift+8' },
-  { id: 'orderedList', labelKey: 'menu.orderedList', group: 'format', defaultCombo: 'Ctrl+Shift+7' },
-  { id: 'codeBlock', labelKey: 'menu.codeBlock', group: 'format', defaultCombo: 'Ctrl+Shift+K' },
-  { id: 'table', labelKey: 'menu.table', group: 'format', defaultCombo: 'Ctrl+Alt+T' }
+  { id: 'blockquote', labelKey: 'menu.quote', group: 'format', defaultCombo: 'Ctrl+Alt+Q' },
+  // 无序列表原本是 Ctrl+L，但 Ctrl+Alt+L 已给了「切换侧边栏」，改用 8/7 与
+  // Google Docs 的列表数字语义对齐。
+  { id: 'bulletList', labelKey: 'menu.bulletList', group: 'format', defaultCombo: 'Ctrl+Alt+8' },
+  { id: 'orderedList', labelKey: 'menu.orderedList', group: 'format', defaultCombo: 'Ctrl+Alt+7' },
+  { id: 'codeBlock', labelKey: 'menu.codeBlock', group: 'format', defaultCombo: 'Ctrl+Alt+K' },
+  { id: 'table', labelKey: 'menu.table', group: 'format', defaultCombo: 'Ctrl+Alt+T' },
+  { id: 'taskStatus', labelKey: 'menu.taskStatus', group: 'format', defaultCombo: 'Ctrl+Enter' }
 ] as const satisfies readonly ShortcutDef[]
 
 export type ShortcutId = (typeof SHORTCUT_DEFS)[number]['id']
@@ -112,7 +134,12 @@ function keyFromEvent(event: KeyboardEvent): string | null {
     BracketRight: ']',
     Minus: '-',
     Equal: '=',
-    Backquote: '`'
+    Backquote: '`',
+    Enter: 'enter',
+    Space: 'space',
+    Tab: 'tab',
+    Delete: 'delete',
+    Backspace: 'backspace'
   }
   return named[code] ?? null
 }
@@ -130,7 +157,7 @@ export function comboFromEvent(event: KeyboardEvent): string | null {
   if (ctrl) parts.push('Ctrl')
   if (event.altKey) parts.push('Alt')
   if (event.shiftKey) parts.push('Shift')
-  parts.push(key.length === 1 ? key.toUpperCase() : key)
+  parts.push(key.length === 1 ? key.toUpperCase() : key.charAt(0).toUpperCase() + key.slice(1))
   return parts.join('+')
 }
 
