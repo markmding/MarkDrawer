@@ -8,14 +8,14 @@
 </script>
 
 <!-- Plain-text files (css/js/txt/…) always use the source editor. -->
-{#key `${tab.path}:${tab.revision}`}
+{#key `${tab.id}:${tab.revision}`}
   <div class="text-host">
     <LazySourceView
       value={tab.content}
       filename={tab.path}
-      onchange={(next) => tabs.update(tab.path, next)}
+      onchange={(next) => tabs.update(tab.id, next)}
       onblur={() => {
-        if (settings.value.autosaveBlur) void tabs.save(tab.path)
+        if (settings.value.autosaveBlur) void tabs.save(tab.id)
       }}
     />
   </div>

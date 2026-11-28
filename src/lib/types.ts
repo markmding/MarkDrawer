@@ -19,6 +19,17 @@ export interface DrawerInfo {
   entries: DrawerEntry[]
 }
 
+/** Result of opening one file from the OS (single-file mode). */
+export interface OpenFileInfo {
+  /** Folder that becomes the tab's read/write base. */
+  root: string
+  /** File name relative to `root`. */
+  rel: string
+  /** Display name of the file. */
+  name: string
+  doc: DocPayload
+}
+
 export type Encoding = 'utf8' | 'gbk' | 'ansi'
 export type Eol = 'lf' | 'crlf'
 
@@ -74,3 +85,9 @@ export interface AssetFile {
 
 export type ViewMode = 'wysiwyg' | 'source' | 'split'
 export type HtmlExportMode = 'folder' | 'single'
+
+/** One changed path reported by the file watcher, with what happened to it. */
+export interface ChangedPath {
+  path: string
+  kind: 'modify' | 'create' | 'remove'
+}

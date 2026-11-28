@@ -1,7 +1,7 @@
 {
   "name": "mark-drawer",
   "private": true,
-  "version": "0.7.1",
+  "version": "0.7.2",
   "type": "module",
   "description": "Mark Drawer 文屉 — a local-first Markdown drawer",
   "scripts": {

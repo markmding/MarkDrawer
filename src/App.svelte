@@ -15,13 +15,15 @@
   import TextPane from './lib/components/TextPane.svelte'
   import Welcome from './lib/components/Welcome.svelte'
   import { getCurrentWindow } from '@tauri-apps/api/window'
-  import { listenOpenFile, listenDrawerChanges, takeLaunchFile } from './lib/api/tauri'
+  import { listenOpenFile, listenDrawerChanges, listenFileChanges, takeLaunchFile } from './lib/api/tauri'
+  import { watchFiles } from './lib/api/drawer'
+  import { DEMO_ROOT } from './lib/api/mock'
   import { APP_VERSION, BRAND_NAME, BRAND_NAME_ZH, BRAND_SLOGAN_EN, BRAND_SLOGAN_ZH, WELCOME_DOC } from './lib/brand'
   import { runEditorAction, type EditorAction } from './lib/editor/actions'
   import { closeFind, findState, openFind } from './lib/editor/find.svelte'
   import { FRONTMATTER_EVENT } from './lib/editor/frontmatter-view'
   import { isEnglish, t } from './lib/i18n'
-  import { basename, dirname } from './lib/paths'
+  import { basename, dirname, isTextFile } from './lib/paths'
   import {
     comboMatches,
     displayCombo,
@@ -85,6 +87,11 @@
           label: t('menu.openDrawer'),
           shortcut: displayCombo(shortcuts.openDrawer),
           run: () => void openDrawer()
+        },
+        {
+          label: t('menu.openContainingDrawer'),
+          disabled: !tabs.active || drawer.root === tabs.active.root,
+          run: () => void openContainingDrawer()
         },
         {
           label: t('menu.newNote'),
@@ -374,6 +381,29 @@
     return () => clearInterval(timer)
   })
 
+  /**
+   * Single-file tabs watch only their own folders (non-recursive). Drawer tabs
+   * are covered by the drawer watcher, so they are excluded here. The demo root
+   * is a virtual URI, not a real folder, and is excluded as well.
+   */
+  const externalFileIds = $derived(
+    tabs.tabs
+      .filter(
+        (tab) =>
+          tab.root !== DEMO_ROOT &&
+          (!drawer.isOpen || tab.root !== drawer.root)
+      )
+      .map((tab) => tab.id)
+      .join('\n')
+  )
+
+  $effect(() => {
+    const paths = externalFileIds ? externalFileIds.split('\n') : []
+    void watchFiles(paths).catch(() => {
+      // Not running inside Tauri, or the watcher could not start.
+    })
+  })
+
   onMount(() => {
     let watcherTimer: ReturnType<typeof setTimeout> | undefined
     let unlisten: (() => void) | undefined
@@ -383,7 +413,8 @@
     // drawer is even opened.
     void themes.load()
 
-    void listenDrawerChanges((paths) => {
+    void listenDrawerChanges((events) => {
+      const paths = events.map((event) => event.path)
       const themeChanged = paths.some((path) => /[\\/]themes[\\/]/i.test(path))
       clearTimeout(watcherTimer)
       watcherTimer = setTimeout(() => {
@@ -396,6 +427,23 @@
       if (disposed) fn()
       else unlisten = fn
     })
+
+    // Single-file tabs get their own debounced stream, mirroring the drawer
+    // watcher so a burst of external edits collapses into one reload pass.
+    let fileTimer: ReturnType<typeof setTimeout> | undefined
+    let unlistenFiles: (() => void) | undefined
+    void listenFileChanges((events) => {
+      const paths = events.map((event) => event.path)
+      clearTimeout(fileTimer)
+      fileTimer = setTimeout(() => tabs.syncFromDisk(paths), 350)
+    })
+      .then((fn) => {
+        if (disposed) fn()
+        else unlistenFiles = fn
+      })
+      .catch(() => {
+        // Not running inside Tauri.
+      })
 
     // Files opened from Explorer, "open with", or the command line. The first
     // launch path is queued in Rust until the webview is ready; later launches
@@ -462,6 +510,7 @@
       disposed = true
       clearTimeout(watcherTimer)
       unlisten?.()
+      unlistenFiles?.()
       unlistenOpenFile?.()
       window.removeEventListener('keydown', onKeydown)
       window.removeEventListener('focusin', onFocusIn)
@@ -470,9 +519,20 @@
   })
 
   async function openDrawer(): Promise<boolean> {
+    // Save edits before the old drawer's tabs go away; a conflict or a failed
+    // write cancels the switch instead of silently dropping text.
+    if (tabs.dirtyCount > 0) {
+      await tabs.saveAll()
+      if (tabs.dirtyCount > 0) {
+        window.alert(t('alerts.unsavedSwitch'))
+        return false
+      }
+    }
+    const previous = drawer.root
     const opened = await drawer.choose()
     if (opened) {
-      tabs.reset()
+      // Single-file tabs live in their own folders and stay open.
+      if (previous) tabs.closeRoot(previous)
       await themes.load()
     } else if (drawer.error) {
       window.alert(drawer.error)
@@ -481,10 +541,11 @@
   }
 
   async function openDemo(): Promise<void> {
+    const previous = drawer.root
     await drawer.openDemo()
-    tabs.reset()
+    if (previous) tabs.closeRoot(previous)
     await themes.load()
-    await tabs.open(WELCOME_DOC)
+    await tabs.open(DEMO_ROOT, WELCOME_DOC)
   }
 
   /**
@@ -497,40 +558,43 @@
     return unc.replace(/^\/\/\?\//, '')
   }
 
-  /** Opens a document handed over by the OS; its folder becomes the Drawer. */
+  /**
+   * Opens a document handed over by the OS in single-file mode: exactly one
+   * file is read, and its folder becomes the tab's read/write base. The folder
+   * is never scanned or watched recursively, and the open drawer is untouched.
+   */
   async function openExternalFile(rawPath: string): Promise<void> {
     const target = plainPath(rawPath)
-    const name = basename(target)
-    let folder = dirname(target)
-    // `D:` alone means "current directory on D:" for the OS — keep the root slash.
-    if (/^[A-Za-z]:$/.test(folder)) folder = `${folder}/`
-    if (!name || !folder) return
-
-    const current = plainPath(drawer.root ?? '').replace(/\/+$/, '')
-    const inside =
-      current.length > 0 && target.toLowerCase().startsWith(`${current.toLowerCase()}/`)
-
-    if (!inside) {
-      if (tabs.dirtyCount > 0) {
-        const proceed = window.confirm(t('alerts.switchDrawer', { name }))
-        if (!proceed) return
-      }
-      const opened = await drawer.open(folder)
-      if (!opened) {
-        window.alert(t('alerts.openFailed', { folder }))
-        return
-      }
-      tabs.reset()
-      await themes.load()
+    if (!isTextFile(target)) {
+      window.alert(t('drawer.unsupported'))
+      return
     }
-
-    const root = plainPath(drawer.root ?? '').replace(/\/+$/, '')
-    const rel = target.slice(root.length).replace(/^\/+/, '')
     try {
-      await tabs.open(rel)
+      await tabs.openAbsolute(target)
     } catch (cause) {
       window.alert(cause instanceof Error ? cause.message : String(cause))
     }
+  }
+
+  /** Explicit upgrade: turn the active single-file tab's folder into a drawer. */
+  async function openContainingDrawer(): Promise<void> {
+    const tab = tabs.active
+    if (!tab || drawer.root === tab.root) return
+    if (tabs.dirtyCount > 0) {
+      await tabs.saveAll()
+      if (tabs.dirtyCount > 0) {
+        window.alert(t('alerts.unsavedSwitch'))
+        return
+      }
+    }
+    const previous = drawer.root
+    const opened = await drawer.open(tab.root)
+    if (!opened) {
+      window.alert(drawer.error ?? t('alerts.openFailed', { folder: tab.root }))
+      return
+    }
+    if (previous) tabs.closeRoot(previous)
+    await themes.load()
   }
 
   async function openNewDoc(folder?: string): Promise<void> {
@@ -546,7 +610,11 @@
         if (!drawer.isOpen) return
       }
     }
-    newDocFolder = folder ?? (tabs.active ? dirname(tabs.active.path) : '')
+    newDocFolder =
+      folder ??
+      (tabs.active && drawer.root && tabs.active.root === drawer.root
+        ? dirname(tabs.active.path)
+        : '')
     showNewDoc = true
   }
 
@@ -557,7 +625,7 @@
   async function saveActive(force = false): Promise<void> {
     const tab = tabs.active
     if (!tab) return
-    const outcome = await tabs.save(tab.path, force)
+    const outcome = await tabs.save(tab.id, force)
     // Conflicts surface as a non-blocking banner above the editor.
     if (outcome === 'error' && tabs.saveError) {
       window.alert(tabs.saveError.replace(/^ENCODING:/, ''))

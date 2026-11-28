@@ -127,7 +127,7 @@
   $effect(() => {
     if (!host) return
     const element = host
-    const path = tab.path
+    const id = tab.id
     const initial = untrack(() => tab.content)
     // YAML front matter stays outside the ProseMirror document; see
     // frontmatter-view.ts. The body is edited, the raw block is re-attached
@@ -147,8 +147,7 @@
     let instance: Crepe | null = null
 
     const uploadImage = async (file: File): Promise<string> => {
-      if (!drawer.root) throw new Error(t('editor.needDrawer'))
-      return persistAttachment(drawer.root, file)
+      return persistAttachment(tab.root, file)
     }
 
     const escapePreview = (value: string) =>
@@ -191,7 +190,7 @@
           onUpload: uploadImage,
           inlineOnUpload: uploadImage,
           blockOnUpload: uploadImage,
-          proxyDomURL: (url: string) => resolveAttachmentUrl(drawer.root, url)
+          proxyDomURL: (url: string) => resolveAttachmentUrl(tab.root, url)
         },
         [Crepe.Feature.CodeMirror]: {
           renderPreview,
@@ -245,7 +244,7 @@
       patchLinkSerialization(ctx)
       ctx.update(uploadConfig.key, (value) => ({
         ...value,
-        uploader: createUploader(() => drawer.root),
+        uploader: createUploader(() => tab.root),
         enableHtmlFileUploader: false
       }))
       ctx.update(prosePluginsCtx, (plugins) => [
@@ -288,7 +287,7 @@
           // Recorded first: the 源码 sync effect compares against it and must
           // not see the tab one step ahead of the editor.
           editorSnapshot = frontmatter + next
-          tabs.update(path, frontmatter + next)
+          tabs.update(id, frontmatter + next)
         }
       })
     })
@@ -514,19 +513,19 @@
     const next = event.relatedTarget as Node | null
     const current = event.currentTarget as HTMLElement
     if (next && current.contains(next)) return
-    if (settings.value.autosaveBlur) void tabs.save(tab.path)
+    if (settings.value.autosaveBlur) void tabs.save(tab.id)
   }
 </script>
 
 <div class="editor-stage">
   {#if mode === 'source'}
-    {#key `${tab.path}:${tab.revision}`}
+    {#key `${tab.id}:${tab.revision}`}
       <LazySourceView
         value={tab.content}
         filename={tab.path}
-        onchange={(next) => tabs.update(tab.path, next)}
+        onchange={(next) => tabs.update(tab.id, next)}
         onblur={() => {
-          if (settings.value.autosaveBlur) void tabs.save(tab.path)
+          if (settings.value.autosaveBlur) void tabs.save(tab.id)
         }}
       />
     {/key}
@@ -537,7 +536,7 @@
     class:split={mode === 'split'}
     class:source-hidden={mode === 'source'}
   >
-    {#key `${tab.path}:${tab.revision}:${editorEpoch}`}
+    {#key `${tab.id}:${tab.revision}:${editorEpoch}`}
       <div
         class="editor-host"
         class:chunked={settings.value.chunkedRendering}

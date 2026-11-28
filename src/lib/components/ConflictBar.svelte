@@ -5,12 +5,12 @@
 
   const active = $derived(tabs.active)
   const visible = $derived(
-    Boolean(active && tabs.conflict && tabs.conflict.path === active.path)
+    Boolean(active && tabs.conflict && tabs.conflict.id === active.id)
   )
 
   async function resolve(action: 'reload' | 'overwrite'): Promise<void> {
     if (!active) return
-    const ok = await tabs.resolveConflict(active.path, action)
+    const ok = await tabs.resolveConflict(active.id, action)
     if (!ok && tabs.saveError) window.alert(tabs.saveError)
   }
 </script>

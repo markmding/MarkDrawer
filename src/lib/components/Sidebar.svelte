@@ -4,7 +4,7 @@
   import { flattenTree, filterTree } from '../filetree'
   import { t } from '../i18n'
   import { basename, dirname, isTextFile, joinPath, withDefaultExtension } from '../paths'
-  import { tabs } from '../stores/tabs.svelte'
+  import { tabs, tabId } from '../stores/tabs.svelte'
   import { drawer } from '../stores/drawer.svelte'
   import type { SearchHit } from '../types'
 
@@ -59,19 +59,26 @@
   }
 
   async function openEntry(path: string): Promise<void> {
+    if (!drawer.root) return
     if (!isTextFile(path)) {
       window.alert(t('drawer.unsupported'))
       return
     }
     try {
-      await tabs.open(path)
+      await tabs.open(drawer.root, path)
     } catch (error) {
       window.alert(message(error))
     }
   }
 
+  /** Whether a drawer-relative path is the active tab. */
+  function isActive(path: string): boolean {
+    return drawer.root !== null && tabs.activeId === tabId(drawer.root, path)
+  }
+
   function activeFolder(): string {
-    return tabs.active ? dirname(tabs.active.path) : ''
+    if (!tabs.active || !drawer.root || tabs.active.root !== drawer.root) return ''
+    return dirname(tabs.active.path)
   }
 
   async function newFolder(parent = activeFolder()): Promise<void> {
@@ -97,7 +104,7 @@
     )
     try {
       await renameEntry(drawer.root, entryPath, target)
-      tabs.renamePath(entryPath, target)
+      tabs.renameInRoot(drawer.root, entryPath, target)
       await drawer.refresh()
     } catch (error) {
       window.alert(message(error))
@@ -109,7 +116,7 @@
     if (!window.confirm(t('drawer.confirmDelete', { name: basename(entryPath) }))) return
     try {
       await deleteEntry(drawer.root, entryPath)
-      tabs.closeByPath(entryPath, true)
+      tabs.closeByPath(drawer.root, entryPath, true)
       await drawer.refresh()
     } catch (error) {
       window.alert(message(error))
@@ -126,7 +133,7 @@
     const target = joinPath(targetDir, basename(source))
     try {
       await renameEntry(drawer.root, source, target)
-      tabs.renamePath(source, target)
+      tabs.renameInRoot(drawer.root, source, target)
       await drawer.refresh()
     } catch (error) {
       window.alert(message(error))
@@ -205,20 +212,20 @@
       {@const entry = row.entry}
       <div
         class="tree-row"
-        class:selected={tabs.activeId === entry.path}
+        class:selected={isActive(entry.path)}
         class:drag-over={dropTarget === entry.path}
         role="treeitem"
         tabindex="-1"
-        aria-selected={tabs.activeId === entry.path}
+        aria-selected={isActive(entry.path)}
         aria-expanded={entry.kind === 'dir' ? drawer.isExpanded(entry.path) : undefined}
         style={`padding-left: ${6 + row.depth * 14}px`}
         draggable={entry.kind === 'file'}
         onclick={() =>
-          entry.kind === 'dir' ? drawer.toggle(entry.path) : void openEntry(entry.path)}
+          entry.kind === 'dir' ? void drawer.toggle(entry.path) : void openEntry(entry.path)}
         onkeydown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
-            if (entry.kind === 'dir') drawer.toggle(entry.path)
+            if (entry.kind === 'dir') void drawer.toggle(entry.path)
             else void openEntry(entry.path)
           }
         }}

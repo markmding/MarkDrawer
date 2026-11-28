@@ -7,6 +7,11 @@
   import type { Encoding, Eol } from '../types'
 
   const active = $derived(tabs.active)
+  /** Folder of the active tab (single-file mode shows the file's own folder). */
+  const rootLabel = $derived(tabs.active?.root ?? drawer.root ?? '')
+  const rootIsDemo = $derived(
+    drawer.isDemo && rootLabel === drawer.root
+  )
 
   const stats = $derived.by(() => {
     if (!active) return { words: 0, lines: 0 }
@@ -41,19 +46,19 @@
   function changeEncoding(event: Event): void {
     if (!active) return
     const value = (event.currentTarget as HTMLSelectElement).value
-    if (value === 'utf8-bom') tabs.setEncoding(active.path, 'utf8', true)
-    else tabs.setEncoding(active.path, value as Encoding, false)
+    if (value === 'utf8-bom') tabs.setEncoding(active.id, 'utf8', true)
+    else tabs.setEncoding(active.id, value as Encoding, false)
   }
 
   function changeEol(event: Event): void {
     if (!active) return
-    tabs.setEol(active.path, (event.currentTarget as HTMLSelectElement).value as Eol)
+    tabs.setEol(active.id, (event.currentTarget as HTMLSelectElement).value as Eol)
   }
 </script>
 
 <footer class="statusbar">
-  <span title={drawer.root ?? ''}>
-    {#if drawer.root}{drawer.isDemo ? t('drawer.demoBadge') : drawer.root}{/if}
+  <span title={rootLabel}>
+    {#if rootLabel}{rootIsDemo ? t('drawer.demoBadge') : rootLabel}{/if}
   </span>
   <span class="spacer"></span>
   {#if active}

@@ -13,6 +13,7 @@ export const zhCN = {
   'menu.options': '选项',
   'menu.about': '关于',
   'menu.openDrawer': '打开抽屉…',
+  'menu.openContainingDrawer': '打开所在文件夹作为抽屉…',
   'menu.newNote': '新建笔记',
   'menu.save': '保存',
   'menu.export': '导出…',
@@ -281,8 +282,7 @@ export const zhCN = {
   'about.tagline': '随文一屉 奇思几许',
 
   'alerts.openFailed': '无法打开：{folder}',
-  'alerts.switchDrawer':
-    '「{name}」位于其他抽屉，打开它会切换抽屉并关闭当前未保存的标签。继续吗？',
+  'alerts.unsavedSwitch': '仍有未保存的修改，无法切换抽屉。请先解决保存冲突或关闭这些标签。',
   'alerts.unsavedClose': '「{title}」有未保存的修改，确定关闭吗？'
 } as const
 

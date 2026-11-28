@@ -3,7 +3,7 @@ use crate::encoding;
 use crate::error::{AppError, AppResult};
 use crate::paths::{
     app_dir, display_path, ensure_app_dirs, is_safe_relative, normalize, resolve_in_drawer,
-    drawer_walker,
+    drawer_walker, level_walker,
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
@@ -99,10 +99,22 @@ fn read_tree(root: &Path) -> AppResult<Vec<Entry>> {
             allowed.insert(rel.to_path_buf());
         }
     }
-    Ok(build_tree(root, Path::new(""), &allowed, 0))
+    Ok(build_tree(root, Path::new(""), &allowed, 0, false))
 }
 
-fn build_tree(root: &Path, rel: &Path, allowed: &HashSet<PathBuf>, depth: usize) -> Vec<Entry> {
+/// Builds nested `Entry`s from a pre-computed set of allowed relative paths.
+///
+/// `lazy` controls how deep the recursion goes: the full tree (`lazy = false`)
+/// recurses into every directory, while a one-level listing (`lazy = true`)
+/// stops after emitting the immediate children and marks every directory with
+/// `children: None` so the frontend can expand it on demand.
+fn build_tree(
+    root: &Path,
+    rel: &Path,
+    allowed: &HashSet<PathBuf>,
+    depth: usize,
+    lazy: bool,
+) -> Vec<Entry> {
     if depth > MAX_TREE_DEPTH {
         return Vec::new();
     }
@@ -129,13 +141,17 @@ fn build_tree(root: &Path, rel: &Path, allowed: &HashSet<PathBuf>, depth: usize)
         let rel_string = to_rel(root, &child_path);
 
         if file_type.is_dir() {
-            let children = build_tree(root, &child_rel, allowed, depth + 1);
+            let children = if lazy {
+                None
+            } else {
+                Some(build_tree(root, &child_rel, allowed, depth + 1, false))
+            };
             entries.push(Entry {
                 name,
                 path: rel_string,
                 kind: "dir".into(),
                 mtime: None,
-                children: Some(children),
+                children,
             });
         } else if file_type.is_file() {
             let mtime = item.metadata().ok().map(|meta| mtime_ms(&meta));
@@ -179,6 +195,48 @@ pub fn open_drawer(path: String) -> AppResult<DrawerInfo> {
         name,
         entries,
     })
+}
+
+/// Reads a single directory level lazily, honoring the same ignore rules as
+/// the full tree without scanning the rest of the drawer. `rel` is the
+/// drawer-relative path of the directory to read (`""` for the top level); the
+/// returned entries have `children: None` so the caller expands on demand.
+#[tauri::command]
+pub fn list_dir_level(drawer: String, rel: String) -> AppResult<Vec<Entry>> {
+    let root = PathBuf::from(&drawer);
+    let dir = if rel.trim().is_empty() {
+        root.clone()
+    } else {
+        resolve_in_drawer(&root, &rel)?
+    };
+    if !dir.is_dir() {
+        return Err(AppError::Message(format!("不是有效的文件夹：{rel}")));
+    }
+    Ok(build_level(&root, &dir))
+}
+
+/// Builds one level of `Entry` for `dir` using the ignore-aware walker, so
+/// `.gitignore` / `.drawerignore` semantics match the full tree. Directories
+/// are returned with `children: None` (lazily loaded on expand).
+fn build_level(root: &Path, dir: &Path) -> Vec<Entry> {
+    let mut allowed = HashSet::new();
+    for result in level_walker(dir) {
+        let Ok(entry) = result else {
+            continue;
+        };
+        if entry.depth() == 0 {
+            continue;
+        }
+        if entry.depth() > 1 {
+            continue;
+        }
+        if let Ok(rel) = entry.path().strip_prefix(root) {
+            allowed.insert(rel.to_path_buf());
+        }
+    }
+
+    let rel = dir.strip_prefix(root).unwrap_or(dir);
+    build_tree(root, rel, &allowed, 0, true)
 }
 
 /// Lists read-only app assets (`themes/*.css`, `templates/*.md`) from the
@@ -233,7 +291,16 @@ pub fn read_doc(drawer: String, rel: String) -> AppResult<DocPayload> {
     if !meta.is_file() {
         return Err(AppError::Message(format!("不是文件：{rel}")));
     }
-    let bytes = fs::read(&path)?;
+    read_doc_at(&path)
+}
+
+/// Reads and decodes one file; shared by `read_doc` and `open_file`.
+fn read_doc_at(path: &Path) -> AppResult<DocPayload> {
+    let meta = fs::metadata(path).map_err(|_| AppError::Message("文件不存在".into()))?;
+    if !meta.is_file() {
+        return Err(AppError::Message("不是文件".into()));
+    }
+    let bytes = fs::read(path)?;
     let decoded = encoding::decode(&bytes)?;
     let eol = encoding::detect_eol(&decoded.text);
     Ok(DocPayload {
@@ -242,6 +309,45 @@ pub fn read_doc(drawer: String, rel: String) -> AppResult<DocPayload> {
         encoding: decoded.encoding,
         eol: eol.to_string(),
         bom: decoded.bom,
+    })
+}
+
+/// Single-file mode: reads exactly one file. Its parent folder becomes the
+/// read/write base; nothing is scanned or watched.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenFileInfo {
+    /// Canonical parent folder, forward slashes, no Windows verbatim prefix.
+    pub root: String,
+    /// File name relative to `root`.
+    pub rel: String,
+    /// Display name of the file.
+    pub name: String,
+    pub doc: DocPayload,
+}
+
+#[tauri::command]
+pub fn open_file(path: String) -> AppResult<OpenFileInfo> {
+    let raw = PathBuf::from(&path);
+    let canonical = raw
+        .canonicalize()
+        .map_err(|_| AppError::Message(format!("文件不存在：{path}")))?;
+    if !canonical.is_file() {
+        return Err(AppError::Message(format!("不是文件：{path}")));
+    }
+    let parent = canonical
+        .parent()
+        .ok_or_else(|| AppError::Message("无法确定文件所在文件夹".into()))?;
+    let rel = canonical
+        .file_name()
+        .map(|value| value.to_string_lossy().to_string())
+        .ok_or_else(|| AppError::Message("文件名无效".into()))?;
+    let doc = read_doc_at(&canonical)?;
+    Ok(OpenFileInfo {
+        root: display_path(parent),
+        name: rel.clone(),
+        rel,
+        doc,
     })
 }
 
@@ -435,6 +541,49 @@ mod tests {
         dir
     }
 
+    // ---- single-file mode (`open_file`) ----
+
+    #[test]
+    fn open_file_returns_parent_root_and_doc_without_touching_siblings() {
+        let root = temp_drawer();
+        let file = root.join("AGENTS.md");
+        fs::write(&file, "# Agent rules\n\nbody\n").unwrap();
+        // Sibling noise in the same folder must not be read or scanned.
+        for index in 0..8 {
+            fs::write(root.join(format!("noise{index}.md")), "x").unwrap();
+        }
+        fs::create_dir_all(root.join("nested")).unwrap();
+        fs::write(root.join("nested/deep.md"), "deep").unwrap();
+
+        let info = open_file(file.to_string_lossy().to_string()).unwrap();
+
+        let root_display = display_path(&root.canonicalize().unwrap());
+        assert_eq!(info.root, root_display);
+        assert_eq!(info.rel, "AGENTS.md");
+        assert_eq!(info.name, "AGENTS.md");
+        assert_eq!(info.doc.content, "# Agent rules\n\nbody\n");
+        assert_eq!(info.doc.encoding, "utf8");
+
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn open_file_rejects_directories_missing_and_binary_files() {
+        let root = temp_drawer();
+        fs::create_dir_all(root.join("sub")).unwrap();
+
+        // a directory is not a file
+        assert!(open_file(root.join("sub").to_string_lossy().to_string()).is_err());
+        // a missing file
+        assert!(open_file(root.join("nope.md").to_string_lossy().to_string()).is_err());
+        // binary content (NUL byte) is rejected with a clear error
+        let bin = root.join("x.md");
+        fs::write(&bin, b"a\0b").unwrap();
+        assert!(open_file(bin.to_string_lossy().to_string()).is_err());
+
+        fs::remove_dir_all(&root).ok();
+    }
+
     #[test]
     fn gbk_crlf_roundtrip() {
         let root = temp_drawer();
@@ -506,6 +655,60 @@ mod tests {
         let hits = search_drawer(drawer, "needle".into(), None).unwrap();
         assert_eq!(hits.len(), 1, "ignored files must not be searchable");
         assert_eq!(hits[0].path, "keep.md");
+
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn list_dir_level_reads_only_one_level_and_respects_ignore() {
+        let root = temp_drawer();
+        fs::write(root.join("top.md"), "# top\nneedle").unwrap();
+        fs::create_dir_all(root.join("sub")).unwrap();
+        fs::write(root.join("sub/inner.md"), "needle").unwrap();
+        // A deeper file that must never appear when listing one level.
+        fs::create_dir_all(root.join("sub/deep")).unwrap();
+        fs::write(root.join("sub/deep/hidden.md"), "needle").unwrap();
+        // Ignored entries stay hidden even in a one-level listing.
+        fs::create_dir_all(root.join("ignored")).unwrap();
+        fs::write(root.join("ignored/skip.md"), "needle").unwrap();
+        fs::write(root.join(".gitignore"), "ignored/\n").unwrap();
+
+        let drawer = root.to_string_lossy().to_string();
+
+        // Top level: `sub` and `top.md` show up; `ignored` is filtered out;
+        // `sub`'s children are NOT populated (lazy).
+        let top = list_dir_level(drawer.clone(), "".into()).unwrap();
+        let top_names: Vec<&str> = top.iter().map(|entry| entry.name.as_str()).collect();
+        assert!(top_names.iter().any(|name| *name == "top.md"));
+        assert!(top_names.iter().any(|name| *name == "sub"));
+        assert!(!top_names.iter().any(|name| *name == "ignored"));
+        let sub = top.iter().find(|entry| entry.name == "sub").unwrap();
+        assert_eq!(sub.kind, "dir");
+        assert!(
+            sub.children.is_none(),
+            "lazy listing must not populate children"
+        );
+
+        // One level into `sub`: `inner.md` and the `deep` dir appear.
+        let nested = list_dir_level(drawer.clone(), "sub".into()).unwrap();
+        let nested_names: Vec<&str> = nested.iter().map(|entry| entry.name.as_str()).collect();
+        assert!(nested_names.iter().any(|name| *name == "inner.md"));
+        assert!(nested_names.iter().any(|name| *name == "deep"));
+
+        // A directory that doesn't exist is rejected, not a silent empty list.
+        assert!(list_dir_level(drawer.clone(), "nope".into()).is_err());
+
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn list_dir_level_rejects_out_of_drawer_paths() {
+        let root = temp_drawer();
+        fs::write(root.join("a.md"), "x").unwrap();
+        let drawer = root.to_string_lossy().to_string();
+
+        assert!(list_dir_level(drawer.clone(), "../".into()).is_err());
+        assert!(list_dir_level(drawer, "C:".into()).is_err());
 
         fs::remove_dir_all(&root).ok();
     }

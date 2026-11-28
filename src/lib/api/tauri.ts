@@ -1,5 +1,6 @@
 // MARK#EZVE.COM
 import { t } from '../i18n'
+import type { ChangedPath } from '../types'
 
 export const isTauri =
   typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -63,10 +64,22 @@ export async function listenOpenFile(handler: (path: string) => void): Promise<(
 }
 
 export async function listenDrawerChanges(
-  handler: (paths: string[]) => void
+  handler: (events: ChangedPath[]) => void
 ): Promise<() => void> {
   if (!isTauri) return () => {}
   const { listen } = await import('@tauri-apps/api/event')
-  const unlisten = await listen<string[]>('drawer:changed', (event) => handler(event.payload))
+  const unlisten = await listen<ChangedPath[]>('drawer:changed', (event) =>
+    handler(event.payload)
+  )
+  return unlisten
+}
+
+/** External changes to single-file tabs (non-recursive, one folder per file). */
+export async function listenFileChanges(
+  handler: (events: ChangedPath[]) => void
+): Promise<() => void> {
+  if (!isTauri) return () => {}
+  const { listen } = await import('@tauri-apps/api/event')
+  const unlisten = await listen<ChangedPath[]>('files:changed', (event) => handler(event.payload))
   return unlisten
 }

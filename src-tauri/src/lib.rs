@@ -58,6 +58,8 @@ pub fn run() {
         .manage(LaunchState::default())
         .invoke_handler(tauri::generate_handler![
             open_drawer,
+            list_dir_level,
+            open_file,
             read_doc,
             write_doc,
             create_entry,
@@ -69,6 +71,8 @@ pub fn run() {
             search_drawer,
             watch_drawer,
             unwatch_drawer,
+            watch_files,
+            unwatch_files,
             write_export_files,
             write_export_file,
             take_launch_file

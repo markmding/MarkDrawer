@@ -33,7 +33,6 @@
   let message = $state<{ kind: 'info' | 'warning' | 'danger'; text: string } | null>(null)
 
   const resolvedTheme = $derived(settings.value.theme === 'dark' ? 'dark' : 'light')
-
   $effect(() => {
     if (!open) return
     htmlMode = settings.value.defaultHtmlMode
@@ -47,7 +46,7 @@
     const markdown = tab.content
     const title = tab.title
     const mode = theme
-    const root = drawer.root
+    const root = tab.root
     let cancelled = false
 
     const timer = setTimeout(() => {
@@ -106,7 +105,7 @@
     message = null
     try {
       const result = await buildHtmlExport({
-        root: drawer.root,
+        root: tab.root,
         markdown: tab.content,
         title: tab.title,
         mode: htmlMode,
@@ -163,7 +162,7 @@
         return
       }
       const result = await buildHtmlExport({
-        root: drawer.root,
+        root: tab.root,
         markdown: tab.content,
         title: tab.title,
         mode: 'single',

@@ -26,7 +26,7 @@
         role="tab"
         tabindex="0"
         aria-selected={tabs.activeId === tab.id}
-        title={tab.path}
+        title={tab.id}
         onclick={() => tabs.select(tab.id)}
         onkeydown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {

@@ -98,6 +98,33 @@ pub fn drawer_walker(root: &Path) -> Walk {
     builder.build()
 }
 
+/// Traversal with the same ignore rules as [`drawer_walker`] but capped to one
+/// level, so a lazily-expanded directory never forces the rest of the drawer
+/// to be scanned. `max_depth(Some(2))` lets the walker descend exactly into the
+/// requested directory's children.
+pub fn level_walker(root: &Path) -> Walk {
+    let mut builder = WalkBuilder::new(root);
+    builder
+        .hidden(true)
+        .parents(false)
+        .ignore(true)
+        .git_ignore(true)
+        .git_global(false)
+        .git_exclude(true)
+        .require_git(false)
+        .max_depth(Some(2));
+    builder.add_custom_ignore_filename(".drawerignore");
+    builder.add_custom_ignore_filename(".markupignore");
+    builder.filter_entry(|entry| {
+        if entry.depth() == 0 {
+            return true;
+        }
+        let name = entry.file_name().to_string_lossy();
+        !SKIP_DIRS.contains(&name.as_ref())
+    });
+    builder.build()
+}
+
 /// Folders owned by the application, not by the drawer. They live next to the
 /// executable so opening a note never scatters app folders into the user's
 /// document folders.

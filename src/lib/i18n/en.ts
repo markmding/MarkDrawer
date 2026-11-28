@@ -16,6 +16,7 @@ export const en: Record<MessageKey, string> = {
   'menu.options': 'Options',
   'menu.about': 'About',
   'menu.openDrawer': 'Open Drawer…',
+  'menu.openContainingDrawer': 'Open Containing Folder as Drawer…',
   'menu.newNote': 'New Note',
   'menu.save': 'Save',
   'menu.export': 'Export…',
@@ -290,7 +291,7 @@ export const en: Record<MessageKey, string> = {
   'about.tagline': 'A drawer for words, a wonder or two',
 
   'alerts.openFailed': 'Cannot open: {folder}',
-  'alerts.switchDrawer':
-    '“{name}” lives in another drawer. Opening it switches drawers and closes unsaved tabs. Continue?',
+  'alerts.unsavedSwitch':
+    'Some tabs still have unsaved changes, so the drawer was not switched. Resolve the save conflicts or close those tabs first.',
   'alerts.unsavedClose': '“{title}” has unsaved changes. Close it anyway?'
 }

@@ -2,8 +2,10 @@
 import type {
   AssetFile,
   DocPayload,
+  DrawerEntry,
   DrawerInfo,
   ExportFile,
+  OpenFileInfo,
   SaveAttachmentResult,
   SearchHit,
   WriteOptions,
@@ -20,6 +22,28 @@ export function isDemoRoot(root: string | null): boolean {
 export async function openDrawer(path: string): Promise<DrawerInfo> {
   if (path === DEMO_ROOT) return mock.open()
   return invoke<DrawerInfo>('open_drawer', { path })
+}
+
+/**
+ * Reads one directory level lazily, honoring the same ignore rules as the full
+ * tree. `rel` is the drawer-relative directory (`''` for the top level). Demo
+ * drawers keep the full tree in memory, so the mock returns that level's
+ * children directly.
+ */
+export async function listDirLevel(
+  root: string,
+  rel: string
+): Promise<DrawerEntry[]> {
+  if (isDemoRoot(root)) return mock.listDirLevel(rel)
+  return invoke<DrawerEntry[]>('list_dir_level', { drawer: root, rel })
+}
+
+/**
+ * Single-file mode: reads one file and returns its folder as the read/write
+ * base. Never scans or watches the folder.
+ */
+export async function openFile(path: string): Promise<OpenFileInfo> {
+  return invoke<OpenFileInfo>('open_file', { path })
 }
 
 export async function readDoc(root: string, rel: string): Promise<DocPayload> {
@@ -140,6 +164,17 @@ export async function writeExportFile(path: string, content: string): Promise<vo
 export async function watchDrawer(root: string): Promise<void> {
   if (isDemoRoot(root) || !isTauri) return
   await invoke('watch_drawer', { root })
+}
+
+/** Watches single-file tabs: each file's own folder, non-recursively. */
+export async function watchFiles(paths: string[]): Promise<void> {
+  if (!isTauri) return
+  await invoke('watch_files', { paths })
+}
+
+export async function unwatchFiles(): Promise<void> {
+  if (!isTauri) return
+  await invoke('unwatch_files')
 }
 
 export async function unwatchDrawer(): Promise<void> {

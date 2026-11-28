@@ -1,6 +1,6 @@
 [package]
 name = "mark-drawer"
-version = "0.7.1"
+version = "0.7.2"
 description = "Mark Drawer 文屉 — a local-first Markdown drawer"
 authors = ["MARK <MARK#EZVE.COM>"]
 edition = "2021"

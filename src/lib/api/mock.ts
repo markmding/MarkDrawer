@@ -272,6 +272,19 @@ export const mock = {
     return { root: state.root, name: state.name, entries: buildTree(state) }
   },
 
+  /** Demo drawers keep the full tree in memory, so a "level" is just its children. */
+  listDirLevel(rel: string): DrawerEntry[] {
+    const tree = buildTree(state)
+    if (!rel) return tree
+    let level = tree
+    for (const segment of rel.split('/')) {
+      const dir = level.find((entry) => entry.kind === 'dir' && entry.name === segment)
+      level = dir?.children ?? []
+      if (level.length === 0) return []
+    }
+    return level
+  },
+
   readDoc(path: string): DocPayload {
     const docMeta = state.meta.get(path) ?? {
       encoding: 'utf8' as Encoding,
